@@ -1,0 +1,321 @@
+;+-----------------------------------------------------------------------------+
+;|	  oo oo	oo oo							       |
+;|	  ^^ ^^컴컴컴컴컴 Treatment Style	  ; 16 bits of style	       |
+;|		^^컴컴컴� Page (FF == ALL pages)  ; up to 256 pages	       |
+;|		    ^^컴컴 Page	Local ID	  ; up to 256 controls/page    |
+;+-----------------------------------------------------------------------------+
+
+SMALL_NORMAL_TEXT	equ	0000b
+SMALL_BOLD_TEXT		equ	0001b
+LARGE_NORMAL_TEXT	equ	0010b
+LARGE_BOLD_TEXT		equ	0011b
+HEADLINE_TEXT		equ	0100b
+TERMINAL_TEXT		equ	0101b
+;-------------------------------------------------------------------------------
+
+THREE_DEE_BOX		equ	0001b
+NO_SINK_OUTLINE		equ	0010b
+;-------------------------------------------------------------------------------
+
+TREATMENT_STYLE_SHIFT	equ	16
+PAGE_MASK		equ	0000FF00h
+PAGE_SHIFT		equ	8
+
+;-------------------------- Main Positioning Equates ---------------------------
+
+TITLE_TOP		equ	11
+TITLE_HEIGHT		equ	(BODY_TOP - TITLE_TOP)
+
+BODY_LEFT		equ	156
+BODY_TOP		equ	54
+BODY_RIGHT		equ	445
+BODY_BOTTOM		equ	280
+
+BODY_WIDTH		equ	(BODY_RIGHT - BODY_LEFT)
+BODY_HEIGHT		equ	(BODY_BOTTOM -	BODY_TOP)
+
+ITEM_SPACING		equ	30
+TIGHT_ITEM_SPACING	equ	25
+
+TEST_BUTTON_LEFT	equ	340
+TEST_BUTTON_TOP		equ	10
+TEST_BUTTON_WIDTH	equ	106
+TEST_BUTTON_HEIGHT	equ	20
+
+;---------------------------------- PAGE IDS -----------------------------------
+
+INTRO_PAGE		equ	0
+INSTRUCTION_PAGE	equ	1
+PPA_VERSION_PAGE	equ	2
+ASPI_VERSION_PAGE	equ	3
+SELECT_DRIVE_PAGE	equ	4
+PERFORM_TEST_PAGE	equ	5
+EXPLAIN_RESULTS		equ	6
+QUOTE_PAGE		equ	7
+CREDITS_PAGE		equ	8
+;-------------------------------------------------------------------------------
+FIRST_ACTION_PAGE	equ	PERFORM_TEST_PAGE
+LAST_ACTION_PAGE	equ	EXPLAIN_RESULTS
+LAST_PAGE		equ	CREDITS_PAGE
+INVISIBLE_PAGE		equ	0FDh	; never shown page
+ACTION_PAGES		equ	0FEh
+EVERY_PAGE		equ	0FFh
+
+;-------------------------------- Control Names	--------------------------------
+
+szTEXT			CHAR	"STATIC",0
+szEDIT			CHAR	"EDIT",0
+szBUTTON		CHAR	"BUTTON",0
+szLISTBOX		CHAR	"LISTBOX",0
+sz3DSink		CHAR	"3DSINK",0
+szRICHEDIT		CHAR	"RICHEDIT",0
+szTABCONTROL		CHAR	"SysTabControl32",0
+szTestMonitor		CHAR	"TIPTEST",0
+
+;-------------------------------- Control Text ---------------------------------
+
+szBack			CHAR	"< &Back",0
+szNext			CHAR	"&Next >",0
+szQuit			CHAR	"E&xit",0
+szCopy			CHAR	"&Copy",0
+szWebUrl		CHAR	"http://grc.com",0
+szHelpMode		CHAR	"Explanation",0
+szFullScreenMode	CHAR	"Full Display",0
+
+;-------------------------- Global button management ---------------------------
+
+BackButtonEnabled	dd	10000000000000000000000111111110b
+NextButtonEnabled	dd	00000000000000000000000011111111b
+
+;===============================================================================
+WindowCreationTable	LABEL	WORD
+;+-----------------------------------------------------------------------------+
+;|			     Window Creation Data			       |
+;|-----------------------------------------------------------------------------|
+;|  ClassName, WindowName, Style, x, y,	Width, Height, Parent, CtrlID, hWnd    |
+;+-----------------------------------------------------------------------------+
+	DWORD	szBUTTON, szBack
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	185-28, 301, 80,	24
+	pagectl	EVERY_PAGE, 0,	IDB_BACK		; (IBD_BACK == 0FF00)
+
+	DWORD	szBUTTON, szNext
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	264-28, 301, 80,	24
+	pagectl EVERY_PAGE, 0,	IDB_NEXT
+
+	DWORD	szBUTTON, szQuit
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	367+35, 301, 45,	24
+	pagectl EVERY_PAGE, 0,	IDB_QUIT, hExitButton
+
+	DWORD	szBUTTON, szCopy
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	367-30, 301, 45,	24
+	pagectl EVERY_PAGE, 0,	IDB_COPY
+
+;----------------- These controls are on the two ACTION	pages ------------------
+
+	; the sound effects button (must go ahead of the 3DSink control
+	DWORD	szBUTTON, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE or BS_AUTOCHECKBOX
+	DWORD	252, 211, 22, 22
+	pagectl PERFORM_TEST_PAGE, 0,,	hSoundCheckbox
+
+	; cover up the	tab control's contents to inhibit selection within it
+	DWORD	OFFSET sz3DSink,	NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	20, 45, 393, 224
+	pagectl	ACTION_PAGES, NO_SINK_OUTLINE
+
+	; tab control for the action window
+	DWORD	szTABCONTROL, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE or WS_CLIPSIBLINGS or TCS_FIXEDWIDTH or TCS_FOCUSNEVER
+	DWORD	14, 16, 433, 260
+	pagectl	ACTION_PAGES, 0,, hActionTabs
+
+	; the cartridge eject button
+	DWORD	szBUTTON, szOneMoment
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	TEST_BUTTON_LEFT, TEST_BUTTON_TOP, TEST_BUTTON_WIDTH, TEST_BUTTON_HEIGHT
+	pagectl	ACTION_PAGES, NULL, IDB_TEST, hTestButton
+
+;+-----------------------------------------------------------------------------+
+;|  INTRO								       |
+;+-----------------------------------------------------------------------------+
+	DWORD	szTEXT, szIntroSubTitle
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	221, BODY_TOP, 230, 60
+	pagectl	INTRO_PAGE, LARGE_NORMAL_TEXT
+
+	DWORD	szTEXT, szIntroText
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	BODY_LEFT, BODY_TOP+64, BODY_WIDTH, 115
+	pagectl	INTRO_PAGE, LARGE_NORMAL_TEXT
+
+	DWORD	sz3DSink, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	15, 17, 122, 260
+	pagectl	INTRO_PAGE, SMALL_NORMAL_TEXT
+
+
+;+-----------------------------------------------------------------------------+
+;|  INSTRUCTIONS							       |
+;+-----------------------------------------------------------------------------+
+	; cover up the	edit box so people can't select	within it
+	DWORD	OFFSET sz3DSink,	NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	19, 16, 428-16, 260
+	pagectl	INSTRUCTION_PAGE, NO_SINK_OUTLINE
+
+	; scrollable instructions edit	window
+	DWORD	szRICHEDIT, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE or WS_VSCROLL or ES_AUTOVSCROLL or ES_MULTILINE or ES_WANTRETURN
+	DWORD	19, 16, 428, 260
+	pagectl	INSTRUCTION_PAGE, LARGE_NORMAL_TEXT, IDE_INSTR, hRichEdit
+
+;+-----------------------------------------------------------------------------+
+;|  PPA_VERSION_PAGE							       |
+;+-----------------------------------------------------------------------------+
+	; cover up the	edit box so people can't select	within it
+	DWORD	OFFSET sz3DSink,	NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	19, 16, 428-16, 260-30
+	pagectl	PPA_VERSION_PAGE, NO_SINK_OUTLINE
+
+	; scrollable instructions edit	window
+	DWORD	szRICHEDIT, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE or WS_VSCROLL or ES_AUTOVSCROLL or ES_MULTILINE or ES_WANTRETURN
+	DWORD	19, 16, 428, 260-30
+	pagectl	PPA_VERSION_PAGE, LARGE_NORMAL_TEXT, IDE_ASPIVER, hPPAVersion
+
+	; FTP transfer	FULL Iomega file set
+	DWORD	szBUTTON, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	24, 255,	200, 27
+	pagectl	PPA_VERSION_PAGE, LARGE_NORMAL_TEXT, IDB_GET_PPA_FULL,	hFullURL
+
+	; FTP transfer	Iomega DRIVER file set
+	DWORD	szBUTTON, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	238, 255, 200, 27
+	pagectl	PPA_VERSION_PAGE, LARGE_NORMAL_TEXT, IDB_GET_PPA_DRIVERS, hMinURL
+
+;+-----------------------------------------------------------------------------+
+;|  ASPI_VERSION_PAGE							       |
+;+-----------------------------------------------------------------------------+
+	; cover up the	edit box so people can't select	within it
+	DWORD	OFFSET sz3DSink,	NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	19, 16, 428-16, 260-30
+	pagectl	ASPI_VERSION_PAGE, NO_SINK_OUTLINE
+
+	; scrollable instructions edit	window
+	DWORD	szRICHEDIT, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE or WS_VSCROLL or ES_AUTOVSCROLL or ES_MULTILINE or ES_WANTRETURN
+	DWORD	19, 16, 428, 260-30
+	pagectl	ASPI_VERSION_PAGE, LARGE_NORMAL_TEXT, IDE_PPAVER, hRichVersion
+
+;+-----------------------------------------------------------------------------+
+;|  SELECT_DRIVE_PAGE							       |
+;+-----------------------------------------------------------------------------+
+	DWORD	szTEXT, szSelectDrive
+	DWORD	WS_CHILD	or WS_VISIBLE or SS_CENTER
+	DWORD	0+80, 10, 462-160, TITLE_HEIGHT
+	pagectl SELECT_DRIVE_PAGE, HEADLINE_TEXT
+
+	; lightly sunken rectangle around the text
+	DWORD	sz3DSink, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	15, 53, 432, 225
+	pagectl	SELECT_DRIVE_PAGE, SMALL_NORMAL_TEXT
+
+	; this	is the body text of the	credits	page
+	DWORD	szTEXT, szSelectionHelp
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	30, 67, 414-5, 210
+	pagectl	SELECT_DRIVE_PAGE, LARGE_NORMAL_TEXT
+
+;+-----------------------------------------------------------------------------+
+;|  PERFORM_TEST_PAGE							       |
+;+-----------------------------------------------------------------------------+
+	; the window containing all of	the controls ...
+	DWORD	szTestMonitor, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	20, 45, 420, 224
+	pagectl PERFORM_TEST_PAGE, 0,,	hTestMonitor
+
+
+;+-----------------------------------------------------------------------------+
+;|  EXPLAIN_RESULTS							       |
+;+-----------------------------------------------------------------------------+
+	; optional text for the perform test page
+	DWORD	szRICHEDIT, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE or WS_VSCROLL or ES_AUTOVSCROLL or ES_MULTILINE or ES_WANTRETURN
+	DWORD	32, 55, 397, 204
+	pagectl	EXPLAIN_RESULTS, 0, TAB_TEXT, hTabText
+
+;+-----------------------------------------------------------------------------+
+;|  QUOTE								       |
+;+-----------------------------------------------------------------------------+
+	; cover up the	edit box so people can't select	within it
+	DWORD	OFFSET sz3DSink,	NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	19, 16, 428-16, 260-30
+	pagectl	QUOTE_PAGE, NO_SINK_OUTLINE
+
+	; scrollable instructions edit	window
+	DWORD	szRICHEDIT, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE or WS_VSCROLL or ES_AUTOVSCROLL or ES_MULTILINE or ES_WANTRETURN
+	DWORD	19, 16, 428, 260-30
+	pagectl	QUOTE_PAGE, LARGE_NORMAL_TEXT,	IDE_QUOTE, hQuoteEdit
+
+	DWORD	szBUTTON, szLeftQuote
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	24, 260,	200, 24
+	pagectl	QUOTE_PAGE, 0,	IDB_LEFT_QUOTE
+
+	DWORD	szBUTTON, szRightQuote
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	238, 260, 200, 24
+	pagectl	QUOTE_PAGE, 0,	IDB_RIGHT_QUOTE
+
+;+-----------------------------------------------------------------------------+
+;|  CREDITS								       |
+;+-----------------------------------------------------------------------------+
+
+;	DWORD	szTEXT,	szPage_4_Title
+;	DWORD	WS_CHILD or WS_VISIBLE
+;	DWORD	20, 38,	375, TITLE_HEIGHT
+;	pagectl	CREDITS_PAGE, HEADLINE_TEXT
+
+	; lightly sunken rectangle around the text
+	DWORD	sz3DSink, NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	15, 80, 432, 198
+	pagectl	CREDITS_PAGE, SMALL_NORMAL_TEXT
+
+	; this	is the body text of the	credits	page
+	DWORD	szTEXT, szPage_4_Text
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	25, 90, 414, 186
+	pagectl	CREDITS_PAGE, LARGE_NORMAL_TEXT
+
+	; the web launch button on the	credits	page
+	DWORD	szBUTTON, szWebUrl
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	17, 301,	100, 24
+	pagectl	CREDITS_PAGE, SMALL_NORMAL_TEXT, IDB_WEB
+
+	; the sunked ring around the Web Button
+	DWORD	OFFSET sz3DSink,	NULL
+	DWORD	WS_CHILD	or WS_VISIBLE
+	DWORD	15, 299,	104, 28
+	pagectl	CREDITS_PAGE, SMALL_BOLD_TEXT
+
+;-/////////////////////////////////////////////////////////////////////////////-
+	SIZE_OF_CREATE_ENTRY	=	40
+	WINDOW_CREATION_ENTRIES = ($-WindowCreationTable)/SIZE_OF_CREATE_ENTRY
+;===============================================================================
+.ERRNZ ($-WindowCreationTable) - (WINDOW_CREATION_ENTRIES*SIZE_OF_CREATE_ENTRY)
+

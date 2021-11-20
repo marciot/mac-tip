@@ -1,0 +1,254 @@
+
+;컴컴컴컴컴컴컴컴컴컴� Clickable Hyperlink to web site 컴컴컴컴컴컴컴컴컴컴컴
+
+szCheck_1	db	"Check my web site at "
+szCheck_2	db	"http://grc.com"
+szCheck_3	db	" from time",0
+szCheck_4	db	"to time for newer versions and other free stuff.",0
+
+szActionTabOne	db	"Perform Test",0
+szActionTabTwo	db	"Explain Results",0
+szCartStatus	db	"Cartridge Status:",0
+
+szLeftQuote	db	"Listen to David Hellier's Introduction",0
+szRightQuote	db	"Listen to David Hellier's Statement",0
+
+szEstimating	db	"Estimating ...",0
+szOneMoment	db	"---  ---  ---",0
+szPressToStart	db	"Press to Begin",0
+szPressToStop	db	"Press to Stop",0
+szPressToSpin	db	"Press to Spin Up",0
+szPressToEject	db	"Press to Eject",0
+szPressToProceed db	"Press to Proceed",0
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴 RTF Sub Files 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+
+szInstructions	db	"instruct",0
+szNoASPI	db	"noaspi",0
+szASPITrouble	db	"trouble",0
+szPPAVersion	db	"ppaver",0
+szDefectList	db	"defect",0
+szLocked	db	"locked",0
+szNoSpares	db	"nospares",0
+szOutOfSpares	db	"outofspares",0
+szFewSpares	db	"fewspares",0
+szNotRunning	db	"notrunning",0
+szRunning	db	"running",0
+szInterrupted	db	"interrupted",0
+szPerfectResult	db	"perfectresult",0
+szExplainResult	db	"explainresult",0
+szBadResult	db	"badresult",0
+szIomegaQuote	db	"iomegaquote",0
+CloseCurly	db	"}"
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴 Cartridge Status Text 컴컴컴컴컴컴컴컴컴컴컴컴컴�
+
+CartStatStrings	dd	szUnknownStat, szAtSpeedStat, szSpinningUp
+		dd	szNotPresent, szSpunDown, szStalledStat
+		dd	szZtrackFailure, szDiskLocked, szLowSpares
+		dd	szTestUnderway, szTestFailure
+		;--------------------------------------------------------------------------
+szUnknownStat	db	"Ejecting Cartridge",0
+szAtSpeedStat	db	"Ready to Test",0
+szSpinningUp	db	"Spinning Up",0
+szNotPresent	db	"Awaiting Cartridge",0
+szSpunDown	db	"Not Spinning",0
+szStalledStat	db	"Stalled Error",0
+szZtrackFailure	db	"Z-Tracks Failure !!",0
+szDiskLocked	db	"Disk Protected",0
+szLowSpares	db	"Low Spares Count",0
+szTestUnderway	db	"Testing Drive "
+DriveUnderTest	db	"X: ...",0
+szTestFailure	db	"Testing Failed",0
+szNoIomegaDrives  db	"No Iomega Drives",0
+
+;袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴袴
+ErrorTypeTest	Label	Byte
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+errcode 000000, "--  None So Far  --"
+;--------------------------------------------------------------------------
+errcode	1C0000, "Missing Defect List"
+
+errcode	0C0101, "Wrote with Realloc"
+errcode	0C8001, "Wrote with Retries"
+errcode	0C8101, "Wrote with Off Track"
+errcode	0C8201, "Wrote w/o SectorMark"
+errcode	0C8301, "Wrote with ID skip"
+errcode	170101, "Read with Retries"
+errcode	170601, "Retried & Realloc"
+errcode	180001, "Data Corrected"
+errcode	180101, "ECC & Retries"
+errcode	180201, "ECC & Realloc'd"
+errcode	1C8F01, "Defect List Recvr'd"
+
+errcode 040002, "Drive Not Ready"
+errcode 040102, "Drive Going Ready"
+errcode 040202, "Drive Not Ready #2"
+errcode 040302, "Drive Needs Help"
+errcode 040402, "Not Rdy - Formating"
+errcode 300002,	"Incompatible Media"
+errcode 3A0002, "Media Not Present"
+
+errcode	010003, "Missing Sector Mark"
+errcode	030003, "Off Track Write"
+errcode	100003, "Bad ID Checksum"
+errcode	110003, "Unrecovered Read"
+errcode	118003, "Unrecovered Read"
+errcode	120003, "MissingID Sync"
+errcode	130003, "Missing Addr Mark"
+errcode	140003, "Sector Not Found"
+errcode	160003, "Sync Mark Missing"
+errcode	1C0003, "Defect List Error"
+errcode	310003, "Corrupt Media Format"
+errcode	310103, "Format Command Fail"
+; errcode31xx03, " -- failures --"
+errcode	320003, "No Spare Sectors"	; abort on this
+errcode	328F03, "No Spare Tracks"	; abort on this
+
+errcode 018104, "Missing Sector Pulse"
+errcode	090004, "Track Follow Error"
+errcode	150004, "Head Seek Failure"
+errcode	220004, "Cartridge Sense Fail"
+; errcode 40xx04, "Self Test Failed"
+errcode 470004, "Data Parity Error"
+; errcode xx0004, "Vendor Specific Error"
+
+errcode 290006, "I/O Bus Reset Error"
+
+errcode	88010B, "Reassigned Blk Err"
+errcode	88020B, "Side Switch Error"
+errcode	0FFFFE6, "Buffer Too Big"
+;--------------------------------------------------------------------------
+errcode 0FFFFFFFF, "-- Unknown Error --"
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+szNoXferLenText	  db	"This system's ASPI manager has returned a ZERO",CR,LF
+		  db	"LENGTH transfer buffer length. Please let Steve",CR,LF
+		  db	"know by sending him eMail at:  steve@grc.com",0
+szNoXferLenTitle  db	"ASPI Manager Problem ...",0
+
+;컴컴컴컴컴컴컴컴컴컴컴컴 Main Window Controls Text 컴컴컴컴컴컴컴컴컴컴컴컴�
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+; INTRO_PAGE
+;--------------------------------------------------------------------------
+szIntroTitle	db	"Trouble In Paradise",0
+
+szIntroSubTitle	db	"FREEWARE by Steve Gibson,",CR
+		db	"Gibson Research Corporation",CR
+		db	"http://grc.com                   ( v 2.1b )",0
+
+szIntroText	db	"This freeware utility determines whether an Iomega Zip "
+		db	"or Jaz drive is prone to developing the dreaded "
+		db	" 'Click Of Death'  (COD) syndrome.",CR
+		db	"My research into the maintenance, repair and data "
+		db	"recovery of Iomega's removable "
+		db	"media mass storage products led to this capability.",CR
+		db	"(Please see my web site for more information.)"
+		db	0
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+; SELECT_DRIVE_PAGE
+;----------------------------------------------------------------------------
+szSelectDrive	db	"Drive Selection",0
+
+szSelectionHelp	db	"This system contains more than one Iomega drive "
+		db	"that can be tested with this program, but only "
+		db	"one drive may be tested at a time."
+		db	CR,CR
+		db	"You may change the drive being tested at any time, "
+		db	"whenever drive testing is not underway, but only "
+		db	"ONE drive should have a cartridge inserted at any "
+		db	"time. If a second cartridge is inserted into a "
+		db	"second drive, this program will assume that you "
+		db	"wish to switch to testing that new drive, so the "
+		db	"previous drive's cartridge will be ejected."
+		db	CR,CR
+		db	"To insure that only the proper drive and/or "
+		db	"cartridge are tested, ALL cartridges inserted into "
+		db	"Iomega drives were ejected when this program was "
+		db	"started.",0
+
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+; PERFORM_TEST_PAGE
+;--------------------------------------------------------------------------
+TestBlackText	dw	250, 2
+		db	"Data Read",0
+		dw	350, 2
+		db	"Patt Write",0
+		dw	250, 18
+		db	"Data Write",0
+		dw	350, 18
+		db	"Patt Read",0
+		dw	11, 39
+		db	"0%",0
+		dw	377, 39
+		db	"100%",0
+		dw	11, 77
+		db	"0",0
+		dw	377, 77
+		db	"100%",0
+		dw	22, 154
+		db	"Sectors",0
+		dw	10, 171
+		db	"Last Error",0
+		dw	17, 188
+		db	"Elapsed",0
+		dw	13, 205
+		db	"Time Left",0
+		dw	278, 154
+		db	"Soft Errors",0
+		dw	275, 171
+		db	"Firm Errors",0
+		dw	272, 188
+		db	"Hard Errors",0
+		dw	271, 205
+		db	"Total Errors",0
+		dw	0
+
+TestGrayText	dw	155, 39
+		db	"Testing Progress",0
+		dw	129, 77
+		db	"Spare Sectors Consumed",0
+		dw	61, 135
+		db	"Testing Location",0
+		dw	219, 135
+		db	"Sound",0
+		dw	297, 135
+		db	"Error Summary",0
+		dw	0
+
+szQuestionMark	db	"?",0
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+; EXPLAIN_RESULTS_PAGE
+;--------------------------------------------------------------------------
+szExplainResults db	"Explain Results",0
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+; CREDITS_PAGE
+;--------------------------------------------------------------------------
+szPage_4_Title	db	"My Kind of Software ...",0
+
+szPage_4_Text	db	"This program was hand crafted  --  byte by byte  --  in "
+		db	"100% pure 32-bit Intel assembly language.  It "
+		db	"is just one .EXE file that runs under "
+		db	"any 32-bit Microsoft Windows operating environment. "
+		db	" (Win 95/98 and NT)  It "
+		db	"requires no messy setup or installation procedure, "
+		db	"and it consumes NOT ONE SINGLE BYTE more memory "
+		db	"than is absolutely necessary.",CR
+		db	CR
+		db	"This is the way I write my programs  --  all of my "
+		db	"programs  --  whether they are free or for purchase, "
+		db	"because it's the BEST WAY to do it.  It's about "
+		db	"creating the best programs possible.    And "
+		db	"that matters to me.",CR
+		db	CR
+		db	"I believe it matters to you too.               "
+		db	"I welcome your judgment.",0
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+;/////////////////////////////////// END ////////////////////////////////////
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴

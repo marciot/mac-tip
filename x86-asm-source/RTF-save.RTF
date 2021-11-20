@@ -1,0 +1,584 @@
+{\rtf1\ansi\deff0\deftab720{\fonttbl{\f0\fswiss MS Sans Serif;}{\f1\froman\fcharset2 Symbol;}{\f2\fswiss\fprq2 Arial;}{\f3\froman Times New Roman;}{\f4\fmodern\fprq1 Courier New;}{\f5\fnil Symbol;}}
+{\colortbl\red0\green0\blue0;\red128\green0\blue0;\red0\green0\blue128;\red128\green0\blue128;\red0\green128\blue128;\red128\green128\blue128;\red255\green0\blue0;\red0\green128\blue0;}
+\deflang1033\pard\plain\f2\fs24 [instruct]
+\par \pard\qc\plain\f2\fs44\b\ul Very Important Information\plain\f2\fs44\b 
+\par \plain\f2\fs16 
+\par \plain\f2\fs28 You \plain\f2\fs28\cf1\b\ul MUST\plain\f2\fs28  take time to read through this
+\par \plain\f2\fs28\cf1\b CRUCIAL OPERATING INFORMATION
+\par \plain\f2\fs28 or this program's test results will be
+\par erroneous and meaningless.\plain\f2\fs22 
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Background:\plain\f2\fs22 
+\par Iomega* Zip* and Jaz* drives cause \plain\f2\fs22\b 'Click Of Death' \plain\f2\fs22 by incorrectly writing to their removable media. This miswriting can damage the user's data, the factory-written low-level formatting, the head's positioning servo information, and the proprietary \plain\f2\fs22\b\i Z-Tracks\plain\f2\fs22  that are used internally to manage and maintain the Zip and Jaz drive's cartridge data.
+\par 
+\par \plain\f2\fs22\b The clicking sound itself\plain\f2\fs22  is nothing more than the sound of the heads being retracted from the cartridge into the drive then immediately reinserted. This deliberate strategy is employed by the drive when it is having trouble locating, reading, or writing any of the cartridge's data. This removal and reinsertion of the heads recalibrates the head positioning mechanism, 'scrubs' the heads to remove excessive oxide deposits, and eliminates any electrostatic charge build-up on the heads.
+\par 
+\par \pard\qc\plain\f2\fs22\cf1\b It is important for you to understand that the clicking
+\par sound itself is \plain\f2\fs22\cf1\b\ul NOT\plain\f2\fs22\cf1\b  the problem.  The clicking is just
+\par an audible indication of a drive that is having trouble
+\par accessing the data on the cartridge. 
+\par \pard\plain\f2\fs22 
+\par Incidents of Click Death have been linked to bad external power supplies, loose power connectors, excessive magnetic oxide build-up on the drive's heads, magnetic and radio interference from nearby sources, media damage from excessive wear or mistreatment, and a seemingly endless array of internal electrical and mechanical problems from causes ranging from rough handling through defective original manufacturing.
+\par 
+\par \plain\f2\fs22\cf2\b Why is this happening all of a sudden?:\plain\f2\fs22 
+\par An unbiased appraisal of recent experience with the large population of Zip -- and to a lesser extent Jaz -- drives, leads to the inescapable -- and unfortunate -- conclusion that recently manufactured Iomega products are experiencing a significantly higher incidence of problems -- both immediately after purchase and after relatively short term use in the field -- than the older versions of the Zip and Jaz drive products which established their reputation for quality and reliability.
+\par 
+\par The \plain\f2\fs22\b Iomega Zip and Jaz\plain\f2\fs22  section of my web site contains a \plain\f2\fs22\b Q&A\plain\f2\fs22  area where I am logging many of my interactions with Iomega's customers. Though these experiences are anecdotal in nature, upon reading them one gets the clear sense that something must have gone very wrong as Iomega attempted to scale up their Zip and Jaz drive manufacturing in order to meet the huge demand \plain\f2\fs22\ul for what were originally very reliable drives\plain\f2\fs22 .
+\par 
+\par \plain\f2\fs22\b I have a lot of respect for the design of the Zip and Jaz drives.\plain\f2\fs22  The personal computing industry \plain\f2\fs22\b desperately needs a \plain\f2\fs22\b\ul STANDARD\plain\f2\fs22  high-quality, high-capacity removable media solution -- rather than an industry fragmented by incompatible storage formats. Iomega was the first with a really terrific solution, and has had the opportunity to unite the industry through the strength of the their products' design.  But it remains to be seen, as many new competitors enter this marketplace, whether Iomega will be able to cure what appear to be manufacturing quality-control problems, and hold the industry together with a single strong universal standard.
+\par \plain\f2\fs22\b\i 
+\par \pard\qc\plain\f2\fs36\cf1\b\i I sincerely hope they can!\plain\f2\fs36\cf1 
+\par \pard\plain\f2\fs22\cf2\b 
+\par About This Program:\plain\f2\fs22 
+\par I wrote the first version of \plain\f2\fs22\b\i SpinRite\plain\f2\fs22  -- my well-known mass storage data recovery and maintenance utility -- more than eleven years ago. At the time of this writing, SpinRite is at version 5.0 and remains without peer in the industry.  It was with those years of experience in mass storage maintenance that I set out to \plain\f2\fs22\b "cure"\plain\f2\fs22  whatever the problem was with these newer Iomega Zip and Jaz drives. But I soon learned, as you have seen above, that \plain\f2\fs22\b\ul there was no single cause for these problems\plain\f2\fs22  because so many different things were apparently going wrong with the Iomega drives.
+\par 
+\par \pard\qc\plain\f2\fs22\cf2\b So instead, \plain\f2\fs22\cf2\b\ul I decided to create two programs\plain\f2\fs22\cf2\b  to address the PC user's need for reliable removable mass storage
+\par . . . while remaining with the Iomega standard.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf1\b\ul Program 1\plain\f2\fs22\cf1\b .  \plain\f2\fs22 This \plain\f2\fs22\b\i 'Trouble In Paradise'\plain\f2\fs22  freeware program is the first of the two. Since no one can 'cure' the problems which may afflict any Zip or Jaz drive without warning, the first step to assuring long data life is \plain\f2\fs22\b early detection of the POTENTIAL for the problem\plain\f2\fs22 . For example, although we can't cure cancer, early detection of cancer's signs in our bodies allows us to take extra measures to assure our survival. \plain\f2\fs22\ul Similar early detection of 'Click Death' is exactly what I've created here in Program 1.
+\par \plain\f2\fs22 
+\par \plain\f2\fs22\cf1\b\ul Program 2\plain\f2\fs22\cf1\b .  \plain\f2\fs22 The second program, to follow this one, will be an inexpensive (but not free) tool allowing any Iomega drive user to maintain and manage \plain\f2\fs22\ul their entire collection of Zip and Jaz cartridges\plain\f2\fs22  while individually monitoring each cartridge's condition and receiving early warning of impending trouble. Please see my web site at  \plain\f2\fs22\b http://grc.com\plain\f2\fs22   for news of the status of this second Program 2 \plain\f2\fs22\b . . .\plain\f2\fs22  as well as for more extensive background information about this whole issue.
+\par 
+\par \plain\f2\fs22\cf3 (You are also invited to join our \plain\f2\fs22\cf3\b COD mailing list\plain\f2\fs22\cf3  to receive a short notice whenever something significant to Iomega Click Of Death occurs -- and to be informed when my next program (\plain\f2\fs22\cf3\b Program 2\plain\f2\fs22\cf3 ) is ready.  To add yourself to this mailing list, please visit  \plain\f2\fs22\cf3\b http://grc.com/codmailing.htm\plain\f2\fs22\cf3  )
+\par \plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b An Important Note About One Click Of Death Myth:\plain\f2\fs22 
+\par There has been widespread rumor that 'Click Of Death' acts as some sort of contagion, able to be spread from one drive to another by a 'contaminated' Click Of Death afflicted cartridge.
+\par 
+\par \plain\f2\fs22\b This actually can occur\plain\f2\fs22 , but only in \plain\f2\fs22\b\ul extremely rare cases\plain\f2\fs22  of \plain\f2\fs22\b\ul massive physical damage\plain\f2\fs22  to the mylar disk spinning inside a Zip cartridge. In these very rare -- \plain\f2\fs22\i but absolutely verified cases\plain\f2\fs22  -- the bent and torn mylar disk catches and 'beheads' any Zip drive attempting to load its heads into the cartridge.
+\par 
+\par Please see the Iomega pages of my web site for detailed discussions \plain\f2\fs22\b\i\ul and photos!\plain\f2\fs22\b  \plain\f2\fs22 of this rare and bizarre occurrence. 
+\par 
+\par However, for the most part, \plain\f2\fs22\b Zip users should not be concerned\plain\f2\fs22  about the possibility of one troubled Zip drive somehow 'infecting' or destroying another one through a 'disease carrier' cartridge. \plain\f2\fs22\b It \plain\f2\fs22\b\ul can\plain\f2\fs22\b  definitely happen -- \plain\f2\fs22 but then, you can also be struck by lightning in your sleep.  So the possibility should not occupy too much of your waking concern.
+\par 
+\par What actually \plain\f2\fs22\b does\plain\f2\fs22  happen -- which has created and maintain this unfortunate myth -- is that a Click Of Death drive \plain\f2\fs22\ul miswrites to its cartridge making it start clicking\plain\f2\fs22 . Then the worried user takes this cartridge to another drive and \plain\f2\fs22\b that other drive also starts clicking!\plain\f2\fs22  But it does so only because it is now unable to read the damaged cartridge. \plain\f2\fs22\b\i\ul This does not mean that the second drive is now damaged!\plain\f2\fs22  Only the \plain\f2\fs22\ul cartridge\plain\f2\fs22  damaged by the first drive is in trouble. It is not the second drive's fault that it's unable to read the cartridge that was actually damaged by its use in the first drive.
+\par 
+\par \plain\f2\fs22\cf2\b What Is This 'Trouble In Paradise' Program?:\plain\f2\fs22 
+\par This 32-bit Windows freeware utility program, which I have named Trouble In Paradise (TIP), is a tightly monitored, non-destructive, data pattern surface tester.  This program reads and writes every sector of data on the drive with surface and drive testing data patterns \plain\f2\fs22\b\ul while preserving all data originally contained on the cartridge\plain\f2\fs22 . Your data is preserved while allowing the function of the drive, and the data surfaces of the cartridge's disk(s), to be fully exercised under closely monitored conditions.
+\par 
+\par Even if this process wasn't being used to locate potential drive and cartridge troubles, running TIP upon your cartridges from time to time \plain\f2\fs22\b will help to keep them in TIP top shape\plain\f2\fs22 . The process of reading, rewriting, and refreshing the data in every sector of the cartridge is \plain\f2\fs22\b absolutely safe \plain\f2\fs22 and is good for them, since it allows any slowly developing trouble to be spotted and handled safely before the data becomes unreadable. (Note that the second program in this series, mentioned above, will go much further in this direction, being specifically designed to support and monitor the long-term maintenance of your removable data cartridges.)
+\par 
+\par Amazingly, throughout the entire development of this program -- from the first moment that it began working -- \plain\f2\fs22\b Not one single byte of data was ever damaged on any of my test cartridges!\plain\f2\fs22   \plain\f2\fs22\i I believe that using TIP is extremely safe\plain\f2\fs22 , and that you'll find TIP to be a useful tool to add to your personal computing experience.
+\par 
+\par \plain\f2\fs18\cf4\b\ul Please Note\plain\f2\fs18\cf4\b :\plain\f2\fs18\cf4  \plain\f2\fs18\cf4\b Non-ATAPI Internal IDE Zip\plain\f2\fs18\cf4  drives did \plain\f2\fs18\cf4\b NOT\plain\f2\fs18\cf4  support the standard ATAPI / SCSI software interface, \plain\f2\fs18\cf4\ul so this program can not operate upon those IDE ZIP drives at all\plain\f2\fs18\cf4 .  I really wish it could, but those drives conceal ALL special Iomega information. TIP does operate upon ALL OTHER internal and external ZIP and Jaz drives.
+\par \plain\f2\fs22 
+\par \plain\f2\fs36\cf2\b How to Use This Program:
+\par \plain\f2\fs22\cf2\b 
+\par \plain\f2\fs18\cf3\b Please Note\plain\f2\fs18\cf3 : The contents of any of this program's pages can be copied to the Windows' clipboard at any time by pressing the "Copy" button below.
+\par Graphical pages will be copied as images and scrolling text pages (like this one) will be copied as text.  You can retain the text formatting by pasting the clipboard into the Windows Wordpad, or Word. If you wish to remove or ignore the formatting, paste into Notepad.
+\par 
+\par You are completely free to share and redistribute any of this information, but providing a link to our web site would be appreciated.   \plain\f4\fs18\cf0 http://grc.com\plain\f2\fs18\cf3 
+\par \plain\f2\fs22\cf2\b __________________________________________________
+\par \plain\f2\fs22 
+\par The trick for properly using TIP for diagnosing drive and/or cartridge problems lies in interpreting the results.
+\par 
+\par \pard\qc\plain\f2\fs22\cf1\b You'll find that I've prepared extensive result-driven explanations which you will automatically receive when any test run has concluded. But a bit of preparation and background is still necessary before you begin: . . .
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\ul In order for this program to find no problems\plain\f2\fs22 , \plain\f2\fs22\b both\plain\f2\fs22  the Zip drive \plain\f2\fs22\b and\plain\f2\fs22  the Zip cartridge must be in perfect working condition.  If either the drive or the cartridge is damaged \plain\f2\fs22\b in any way\plain\f2\fs22  this very sensitive program will show you the trouble \plain\f2\fs22\b . . .\plain\f2\fs22  but in many mild cases of trouble, TIP will be unable to determine \plain\f2\fs22\b which\plain\f2\fs22  of the two components -- the drive or the cartridge -- is actually the source of the problems.  This is the bit of detective work you'll need to pursue, aided by feedback from TIP.
+\par 
+\par One way to think of it is that with a drive that's known to be good, you can use TIP to test the condition of unknown cartridges. Or, with a cartridge that's known to be (initially) good, TIP can test a drive whose condition is unknown. Note that testing an initially good cartridge on a truly bad 'Click Of Death' drive \plain\f2\fs22\ul can create damage on the cartridge\plain\f2\fs22 , but I have deliberately designed TIP so that even in these cases your data will be safe, and you'll see this happening as the test runs so you can stop the test before the damage becomes extensive.
+\par 
+\par The 'detective work' is not really any big deal, since it only entails reading through the result analysis that will be presented after each test, and perhaps running the test again with the same or a different cartridge, or -- if possible -- finding another drive to test with the same cartridge \plain\f2\fs22\b . . .\plain\f2\fs22  depending upon the outcome analysis.
+\par 
+\par Aided by TIP, if you're not sure whether the drive or cartridge is causing the trouble, changing one or the other -- and seeing what happens then -- will allow you to develop a much deeper feeling for what's going on within your system than you've ever been able to get before. And you'll find that after a few experiences you'll get the hang of it and will be able to accurately judge what's happening from the way the test runs.
+\par 
+\par \plain\f2\fs22\cf2\b Thank you very much for taking the time to read through all this material! . . . \plain\f2\fs22 I know you're probably anxious to get to it, but you needed to first be equipped with the essence of what I've learned through my research into these confusing, troubling, but very important issues.  Also, \plain\f2\fs22\ul don't forget my web site\plain\f2\fs22 , since it will always contain more recent information, data, and experience than can be packaged into a static computer program such as this.
+\par 
+\par So \plain\f2\fs22\b . . .\plain\f2\fs22  with \plain\f2\fs22\b ALL\plain\f2\fs22  of that said, please insert a cartridge into whichever Iomega drive you want to use and proceed to the \plain\f2\fs22\b Next\plain\f2\fs22  panel \plain\f2\fs22\b . . .
+\par 
+\par \pard\qc\plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [noaspi]
+\par \pard\qc\plain\f2\fs36\cf1\b This System's ASPI Drivers are
+\par Not Installed or Not Functioning.\plain\f2\fs22 
+\par \plain\f2\fs16 
+\par \plain\f2\fs22\cf2\b To use this program, which communicates with mass storage devices through the A.S.P.I. programming interface, you must first install operating system
+\par  support for the ASPI device driver layer.\plain\f2\fs22\cf0 
+\par \pard\plain\f2\fs22\cf0 
+\par \plain\f2\fs22\cf4\b Background:\plain\f2\fs22\cf0 
+\par \plain\f2\fs22 The Windows operating environments include built-in support for the \plain\f2\fs22\b A\plain\f2\fs22 dvanced \plain\f2\fs22\b S\plain\f2\fs22 CSI \plain\f2\fs22\b P\plain\f2\fs22 rogramming \plain\f2\fs22\b I\plain\f2\fs22 nterface (ASPI) which allows peripheral vendors to create ASPI-compatible drivers for use in interfacing their equipment to the operating system. But this Windows system's ASPI drivers are apparently missing or not functioning correctly at the moment.
+\par 
+\par Out of date or incorrectly installed ASPI drivers can be the cause of drives "missing" from the system,  or not being "seen" by TIP.
+\par 
+\par \plain\f2\fs22\cf4\b How did this happen?:\plain\f2\fs22 
+\par Since ASPI layer drivers are readily available, and are frequently provided in haphazard fashion by peripheral vendors, Windows systems often wind up with obsolete, oddball, missing, or out-of-synch sets of ASPI driver files.
+\par 
+\par \plain\f2\fs22\cf4\b So what do you do?:\plain\f2\fs22 
+\par Since this turns out to be a frequently encountered problem that no one else is addressing, I decided to tackle it with another free software offering that assumes full responsibility for the problem, and cures it for anyone in one step (\plain\f2\fs22\b with full 'undo'\plain\f2\fs22  if things don't work out!).  I built an all-in-one automatic ASPI driver layer analysis and updating tool called: \plain\f2\fs22\b ASPI ME\plain\f2\fs22  that is freely available for your downloading and use at the URL \plain\f2\fs22\b :\plain\f2\fs22 
+\par 
+\par \pard\qc\plain\f4\fs24 ftp://grc.com/aspi_me.exe
+\par \pard\plain\f2\fs22 
+\par This small and tightly written program \plain\f2\fs22\b\i\ul incorporates\plain\f2\fs22  all of the most recent ASPI drivers for Windows 95/98 & NT inside itself and will analyze and instantly update any Windows system needing ASPI driver repair \plain\f2\fs22\b . . .\plain\f2\fs22  (like this one!)
+\par 
+\par To receive the program you may enter the URL shown above into any web browser, or simply press the URL button below to initiate a transfer of this program into this computer.
+\par 
+\par After running \plain\f2\fs22\b ASPI ME\plain\f2\fs22  \plain\f2\fs22\b . . .\plain\f2\fs22  so that it can 'ASPI YOU' \plain\f2\fs22\b . . .\plain\f2\fs22  restart Windows so that the new files will be loaded. Finally, re-run this Trouble In Paradise (TIP.EXE) program.
+\par 
+\par You will not see this screen again, since your machine will then be using the latest and greatest ASPI drivers \plain\f2\fs22\b . . .\plain\f2\fs22  and will have a much better chance of functioning correctly.
+\par 
+\par The \plain\f2\fs22\b ASPI ME\plain\f2\fs22  program, like this \plain\f2\fs22\b Trouble In Paradise\plain\f2\fs22  program, is also freeware which you are encouraged to freely share and distribute to anyone who might find it useful.
+\par \plain\f2\fs24 [aspiver]
+\par \pard\qc\plain\f2\fs36\cf1\b This System Might Benefit
+\par from the ASPI ME Utility.\plain\f2\fs22 
+\par \plain\f2\fs16 
+\par \plain\f2\fs22\cf2\b Some problems with ASPI-driven peripherals
+\par \plain\f2\fs22\cf2\b\i (like Zip and Jaz Drives!)\plain\f2\fs22\cf2\b  \plain\f2\fs22\cf2\b\ul have been cured\plain\f2\fs22\cf2\b  by
+\par updating to a synchronized set of drivers.\plain\f2\fs22\cf0 
+\par \pard\plain\f2\fs22\cf0 
+\par \plain\f2\fs22\cf4\b Background:\plain\f2\fs22\cf0 
+\par \plain\f2\fs22 The Windows operating environments include built-in support for the \plain\f2\fs22\b A\plain\f2\fs22 dvanced \plain\f2\fs22\b S\plain\f2\fs22 CSI \plain\f2\fs22\b P\plain\f2\fs22 rogramming \plain\f2\fs22\b I\plain\f2\fs22 nterface (ASPI) which allows peripheral vendors to create ASPI-compatible drivers for use in interfacing their equipment to the operating system. But this Windows system's ASPI drivers are apparently missing or not functioning correctly at the moment.
+\par 
+\par Out of date or incorrectly installed ASPI drivers can be the cause of drives "missing" from the system,  or not being "seen" by TIP.
+\par 
+\par \plain\f2\fs22\cf4\b How did this happen?:\plain\f2\fs22 
+\par Since ASPI layer drivers are readily available, and are frequently provided in haphazard fashion by peripheral vendors, Windows systems often wind up with obsolete, oddball, missing, or out-of-synch sets of ASPI driver files.
+\par 
+\par \plain\f2\fs22\cf4\b So what do you do?:\plain\f2\fs22 
+\par Since this turns out to be a frequently encountered problem that no one else is addressing, I decided to tackle it with another free software offering that assumes full responsibility for the problem, and cures it for anyone in one step (\plain\f2\fs22\b with full 'undo'\plain\f2\fs22  if things don't work out!).  I built an all-in-one automatic ASPI driver layer analysis and updating tool called: \plain\f2\fs22\b ASPI ME\plain\f2\fs22  that is freely available for your downloading and use at the URL \plain\f2\fs22\b :\plain\f2\fs22 
+\par 
+\par \pard\qc\plain\f4\fs24 ftp://grc.com/aspi_me.exe
+\par \pard\plain\f2\fs22 
+\par This small and tightly written program \plain\f2\fs22\b\i\ul incorporates\plain\f2\fs22  all of the most recent ASPI drivers for Windows 95/98 & NT inside itself and will analyze and instantly update any Windows system needing ASPI driver repair \plain\f2\fs22\b . . .\plain\f2\fs22  (like this one!)
+\par 
+\par To receive the program you may enter the URL shown above into any web browser, or simply press the URL button below to initiate a transfer of this program into this computer.
+\par 
+\par After running \plain\f2\fs22\b ASPI ME\plain\f2\fs22  \plain\f2\fs22\b . . .\plain\f2\fs22  so that it can 'ASPI YOU' \plain\f2\fs22\b . . .\plain\f2\fs22  restart Windows so that the new files will be loaded. Finally, re-run this Trouble In Paradise (TIP.EXE) program.
+\par 
+\par You will not see this screen again, since your machine will then be using the latest and greatest ASPI drivers \plain\f2\fs22\b . . .\plain\f2\fs22  and will have a much better chance of functioning correctly.
+\par 
+\par The \plain\f2\fs22\b ASPI ME\plain\f2\fs22  program, like this \plain\f2\fs22\b Trouble In Paradise\plain\f2\fs22  program, is also freeware which you are encouraged to freely share and distribute to anyone who might find it useful.
+\par \plain\f2\fs24 [ppaver]
+\par \pard\qc\plain\f2\fs44\cf1\b WOW! . . . Do I Have
+\par \plain\f2\fs44\cf1\b\ul GREAT NEWS\plain\f2\fs44\cf1\b  for YOU!
+\par \plain\f2\fs16 
+\par \plain\f2\fs22\cf2\b Very soon, your external Parallel Port Zip Drive will be running \plain\f2\fs22\cf2\b\ul more than 400% faster\plain\f2\fs22\cf2\b  than it does right now!
+\par \pard\plain\f2\fs22\cf0 
+\par That's right! This Windows system is currently using \plain\f2\fs22\cf0\b an old, obsolete  (and slow!) version\plain\f2\fs22\cf0  of the Iomega Parallel Port Driver (PPA3.MPD) which runs less than \plain\f2\fs22\cf0\ul one-quarter of the speed\plain\f2\fs22\cf0  of the latest driver! You can download and install the updated driver for \plain\f2\fs22\cf0\ul free\plain\f2\fs22\cf0  and instantly gain more than \plain\f2\fs22\cf0\b FOUR TIMES the performance\plain\f2\fs22\cf0  from your current external Zip drive!
+\par 
+\par \plain\f2\fs22\cf4\b Background:
+\par \plain\f2\fs22\cf0 I discovered this problem when 'Trouble In Paradise' (TIP) was having difficulty running on many existing external Zip systems.  When I tracked down the problem, it turned out that TIP was attempting to transfer 64k bytes of data at a time (for good TIP-testing performance) \plain\f2\fs22\cf0\ul but those external Zip systems \plain\f2\fs22\cf0\b\ul (like this one right here!)\plain\f2\fs22\cf0\ul  could only handle a maximum transfer of 8k bytes at a time\plain\f2\fs22\cf0 !  This meant that any software trying to read or write files to the drive would need to break up the data into eight times as many smaller pieces in order to squeeze the data out through the parallel port!
+\par 
+\par Well, of course, I enhanced TIP immediately so that it \plain\f2\fs22\cf0\b would\plain\f2\fs22\cf0  work on performance-crippled parallel port systems like this one \plain\f2\fs22\cf0\b . . .\plain\f2\fs22\cf0  but I also added this information page so you'd know what TIP had discovered here, and \plain\f2\fs22\cf0\b how you could get your system rev'ed up to 400% more Zip Drive speed!\plain\f2\fs22\cf0 
+\par 
+\par \plain\f2\fs22\cf4\b What do you need to do?
+\par \plain\f2\fs22\cf0 Although you may only need one relatively small (53k for Win95/98 or 44k for NT) driver file changed, it would probably be wisest to update your \plain\f2\fs22\cf0\b entire set\plain\f2\fs22\cf0  of Iomega files \plain\f2\fs22\cf0\b . . .\plain\f2\fs22\cf0  though this will take some downloading time.
+\par 
+\par The newest version of the Iomega files is 5.51. You can easily determine the version of your existing Iomega files by looking at their "time of day" which encodes their version number for easy viewing. (For example, the newest updated files show that they were made at 5:51 am)
+\par 
+\par The updated Iomega files are located on Iomega's FTP server at the following URL addresses:
+\par 
+\par \plain\f2\fs22\cf4\b For Windows 95/98:
+\par \plain\f2\fs22\cf5 For the whole set of version 5.51 Iomega Tools95 files:
+\par \plain\f4\fs18\cf2 ftp://ftp.iomega.com/pub/english/w95_551.exe (2,437k)\plain\f2\fs22\cf0 
+\par \plain\f2\fs22\cf5 For just the basic Iomega version 5.51 Win95/98 driver files:
+\par \plain\f4\fs18\cf2 ftp://ftp.iomega.com/pub/english/w95drvr.exe (740k)
+\par \plain\f2\fs22\cf0 
+\par \plain\f2\fs22\cf4\b For Windows NT:\plain\f2\fs22\cf0 
+\par \plain\f2\fs22\cf5 For the whole set of version 5.51 Iomega Tools files:
+\par \plain\f4\fs18\cf2 ftp://ftp.iomega.com/pub/english/wnt_551.exe (2,384k)\plain\f2\fs22\cf0 
+\par \plain\f2\fs22\cf5 For just the basic Iomega version 5.51 WinNT driver files: 
+\par \plain\f4\fs18\cf2 ftp://ftp.iomega.com/pub/english/wntdrvr.exe (718k)
+\par \plain\f2\fs22\cf0 
+\par To simplify things for you, I've set up the two buttons below to \plain\f2\fs22\cf0\ul automatically choose the proper operating system version of the files\plain\f2\fs22\cf0 , and start the download from Iomega's FTP server. So you only need to decide whether you want the whole Tools file set (probably a good idea) or just the updated driver files (to save on download time.)
+\par 
+\par No matter which you choose, simply run the resulting file.
+\par 
+\par It will unpack the replacement files into your system's "temp" directory. Then you need to run the \plain\f2\fs22\cf0\b SETUP.EXE\plain\f2\fs22\cf0  program located there to install the drivers.  After restarting your system, you'll be all set with the latest and greatest files \plain\f2\fs22\cf0\b . . .\plain\f2\fs22\cf0  and your parallel port Zip drive will be running more than FOUR TIMES faster than it ever has before!
+\par 
+\par \plain\f2\fs22\cf1 (You might want to measure the transfer time of a large file \plain\f2\fs22\cf1\b before\plain\f2\fs22\cf1  you perform the upgrade, then again afterward, to see for yourself how much your own Zip drive's performance has increased!)
+\par \plain\f2\fs22\cf0 
+\par \plain\f2\fs22\cf4 Also note that you will \plain\f2\fs22\cf4\ul not\plain\f2\fs22\cf4  see this screen again after you upgrade since you'll then be using a parallel port driver that's capable of transferring 64k byte blocks for much greater performance! Therefore, if you wish to save this text for any reason, you should \plain\f2\fs22\cf4\ul press the \plain\f2\fs22\cf4\b\ul Copy button\plain\f2\fs22\cf4\ul  below\plain\f2\fs22\cf4  to copy the contents of this window into your system's clipboard, then paste it into Notepad, Wordpad, or any other text container where it can be saved, eMailed, or shared with others.
+\par \plain\f2\fs22\cf0 
+\par Best of luck to you, and I'm glad that I was able to help provide this significant performance boost for your system! Remember that this "Trouble In Paradise" program is freeware and that I encourage its distribution and sharing. You are invited to help me spread the word of this program's existence!
+\par 
+\par \pard\qc\plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [trouble]
+\par \pard\qc\plain\f2\fs44\cf1\b TIP has Not Found
+\par Any Compatible Drives.
+\par \plain\f2\fs16 
+\par \plain\f2\fs22\cf2\b PLEASE NOTE: This program is specifically
+\par designed for use with Iomega Corporation's ZIP
+\par  and JAZ removable media mass storage devices.
+\par 
+\par \pard\plain\f2\fs22\cf0 This Trouble In Paradise (TIP) program has been specifically designed for use with Zip and Jaz drives. This has allowed it to take advantage of many features specific and unique to these drives. Therefore it can NOT operate on other types of drives made by other manufacturers.
+\par 
+\par \plain\f2\fs22\cf0\b Since TIP uses the ASPI interface, it may also fail to operate on some of the older non-ATAPI IDE ZIP drives.
+\par \plain\f2\fs22\cf0 
+\par \plain\f2\fs22\cf0\b If you are having trouble with any other drive\plain\f2\fs22\cf0 , or wishing to maintain or recover drive data, our commercial SpinRite disk utility product ($89) is the industry's leading general purpose hard disk maintenance, repair, and recovery tool. SpinRite functions with \plain\f2\fs22\cf0\b all\plain\f2\fs22\cf0  drives of any make and model. Please see my web site for full information and purchasing details.
+\par 
+\par If you believe that this program \plain\f2\fs22\cf0\b should\plain\f2\fs22\cf0  be seeing a drive that it is not, you can try updating this system's ASPI drivers using my automatic \plain\f2\fs22\cf0\b ASPI ME\plain\f2\fs22\cf0  program. ASPI ME is\plain\f2\fs22  another free software offering that updates and maintains a system's ASPI device driver layer in one step (\plain\f2\fs22\b with full 'undo'\plain\f2\fs22  if things don't work out.).  ASPI ME is freely available for your downloading and use at the URL \plain\f2\fs22\b :\plain\f2\fs22 
+\par 
+\par \pard\qc\plain\f4\fs24 ftp://grc.com/aspi_me.exe
+\par \pard\plain\f2\fs22 
+\par This small and tightly written program \plain\f2\fs22\b\i\ul incorporates\plain\f2\fs22  all of the most recent ASPI drivers for Windows 95/98 & NT inside itself and will analyze and instantly update any Windows system needing ASPI driver repair \plain\f2\fs22\b . . .\plain\f2\fs22 
+\par 
+\par To receive the program you may enter the URL shown above into any web browser, or simply press the URL button below to initiate a transfer of this program into this computer.
+\par 
+\par After running \plain\f2\fs22\b ASPI ME\plain\f2\fs22  \plain\f2\fs22\b . . .\plain\f2\fs22  so that it can 'ASPI YOU' \plain\f2\fs22\b . . .\plain\f2\fs22  restart Windows so that the new files will be loaded. Finally, re-run this Trouble In Paradise (TIP.EXE) program.
+\par 
+\par You will not see this screen again, since your machine will then be using the latest and greatest ASPI drivers \plain\f2\fs22\b . . .\plain\f2\fs22  and will have a much better chance of functioning correctly.
+\par 
+\par The \plain\f2\fs22\b ASPI ME\plain\f2\fs22  program, like this \plain\f2\fs22\b Trouble In Paradise\plain\f2\fs22  program, is also freeware which you are encouraged to freely share and distribute to anyone who might find it useful.
+\par \plain\f2\fs22\cf0 
+\par \pard\qc\plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [defect]
+\par \pard\qc\plain\f2\fs44\b\ul Z-Track Failure!\plain\f2\fs44\b 
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 The Drive Reports that it has been
+\par completely \plain\f2\fs28\cf6\ul unable to access \plain\f2\fs28\cf6\b\ul ANY\plain\f2\fs28\cf1 
+\par of this Cartridge's Four "Z" Tracks.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Background:\plain\f2\fs22 
+\par Zip and Jaz drives are completely dependent upon private information stored in four redundant hidden cartridge disk tracks known as \plain\f2\fs22\b\i Z-tracks\plain\f2\fs22 .
+\par 
+\par \plain\f2\fs22\cf2\b Consequence:\plain\f2\fs22 
+\par When all four of these \plain\f2\fs22\b Z-tracks\plain\f2\fs22  have been damaged by a 'Click Of Death' defective writing drive, all drives (whether they are good or bad) will refuse to access \plain\f2\fs22\cf1\b\ul ANY\plain\f2\fs22  of the data contained within the cartridge \plain\f2\fs22\b . . .\plain\f2\fs22  \plain\f2\fs22\cf1\b\ul and ALL information is lost forever!\plain\f2\fs22 
+\par 
+\par \plain\f2\fs22\cf2\b Recourse:\plain\f2\fs22 
+\par \pard\qc\plain\f2\fs22\b 
+\par \plain\f2\fs28\b There is \plain\f2\fs28\b\ul NO KNOWN MEANS\plain\f2\fs28\b  of
+\par repairing or reconstituting a
+\par cartridge's dead Z-tracks.
+\par \plain\f2\fs22 
+\par \pard\plain\f2\fs22 Perhaps Iomega can bring a cartridge's Z-tracks back to life. However, I have been told over and over by engineers within Iomega that the Z-tracks are completely inaccessible to external software utilities and that \plain\f2\fs22\b there's nothing anyone can do\plain\f2\fs22  to access the data on any cartridge that has had all four of its Z-tracks damaged.
+\par 
+\par Depending upon the precise nature of the Z-track damage, I would think that there's an \plain\f2\fs22\ul outside chance\plain\f2\fs22  that another drive \plain\f2\fs22\ul might\plain\f2\fs22  be able to read at least one of the Z-tracks, or that even \plain\f2\fs22\ul this\plain\f2\fs22  drive might.  Since Z-tracks are initially read upon insertion of the cartridge, you must eject and re-insert the cartridge hoping to eventually get one Z-track recognized.
+\par 
+\par However, \plain\f2\fs22\ul if this drive\plain\f2\fs22  is the one which is believed to have damaged the tracks in the first place, then doing so won't repair the damage.  You \plain\f2\fs22\ul must\plain\f2\fs22  use a known-good drive in order for it to re-write the bad Z-tracks, thus making the cartridge's data once again available.
+\par 
+\par \plain\f2\fs22\b But be sure you understand: \plain\f2\fs22 This might \plain\f2\fs22\ul only\plain\f2\fs22  work if you are \plain\f2\fs22\ul extremely lucky\plain\f2\fs22  and manage to briefly get a drive to successfully read at least one of this cartridge's Z-tracks.
+\par 
+\par \plain\f2\fs22\cf2\b And now:\plain\f2\fs22 
+\par TIP can do nothing further with this cartridge in its present condition. Please eject it now and try working with another cartridge, or try this cartridge with this program on another drive to induce that drive to possibly effect Z-track repair.
+\par 
+\par \pard\qc\plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [locked]
+\par \pard\qc\plain\f2\fs44\b This Cartridge is Locked
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 Since this program reads and writes,
+\par the removable cartridge must be
+\par unlocked for reading and writing.
+\par \pard\plain\f2\fs22 
+\par You must eject and re-insert this cartridge, then properly respond to the password dialog box, or use another cartridge that has not had write or read/write protection applied to it.
+\par 
+\par \pard\qc\plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.\plain\f2\fs22 
+\par \pard\plain\f2\fs24 [nospares]
+\par \pard\qc\plain\f2\fs44\b This Cartridge is in
+\par Serious Trouble!
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 The drive reports that this cartridge's
+\par spare sector pools have been
+\par completely exhausted.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Background:\plain\f2\fs22 
+\par Zip and Jaz drives maintain spare sectors that are automatically called into use when an \plain\f2\fs22\ul apparently defective \plain\f2\fs22 sector is encountered during reading and writing.
+\par 
+\par I say "\plain\f2\fs22\ul apparently defective\plain\f2\fs22 " above, since "Click Of Death" Iomega drives damage its cartridge's sectors. Then, after the sectors have been damaged, they are replaced with new sectors from the cartridge's spare sector pools! In other words, nothing was really wrong with the sectors the drive was replacing -- until it had damaged them itself, or in misreading them believed them to be damaged -- then the drive replaced those previously good sectors with spares.
+\par 
+\par \pard\qc\plain\f2\fs22\b This destructive cycle repeats until all
+\par spare sectors have been consumed !
+\par \pard\plain\f2\fs22 
+\par Therefore, the fact that this cartridge's spare sectors have all been consumed, \plain\f2\fs22\b strongly suggests\plain\f2\fs22  that at some point in the past this cartridge came into contact with a bad Iomega drive.
+\par (\plain\f2\fs22\ul Even if the drive it is running on now is perfectly fine.\plain\f2\fs22 )
+\par 
+\par \plain\f2\fs22\cf2\b Consequence:\plain\f2\fs22 
+\par Since spare sectors \plain\f2\fs22\b are required\plain\f2\fs22  for safe use of any Iomega cartridge, this cartridge can not be safely tested, nor can it be safely used for storing data.
+\par 
+\par \plain\f2\fs22\cf2\b Recourse:\plain\f2\fs22 
+\par If this cartridge contains valuable data, the data should be moved to safety immediately, then the cartridge should receive a "Long Format" on a \plain\f2\fs22\b known good Iomega drive\plain\f2\fs22  (i.e. a drive which has recently passed TIP testing.)
+\par 
+\par If the data can not be read from this cartridge on a known good drive then my commercial SpinRite utility can be used to repair and recover the cartridge's data, but \plain\f2\fs22\b\ul ONLY\plain\f2\fs22  use SpinRite with cartridges on Iomega drives that are known to be good. (SpinRite description and purchasing information can be found on my web site at: http://grc.com.)
+\par 
+\par At the time of this writing I plan to create another utility program for users of Iomega products.  It will be able to test Iomega drive products and also to perform short and long Iomega reformats.  Please check my web site at http://grc.com for further information on this next product.
+\par 
+\par \pard\qc\plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.\plain\f2\fs22 
+\par \pard\plain\f2\fs24 [outofspares]
+\par \pard\qc\plain\f2\fs44\b This Cartridge's Spare Sectors Have All Been Consumed!
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 The drive reports that this cartridge's
+\par spare sector pools have been
+\par completely exhausted.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Background:\plain\f2\fs22 
+\par Zip and Jaz drives maintain spare sectors that are automatically called into use when an \plain\f2\fs22\ul apparently defective \plain\f2\fs22 sector is encountered during reading and writing.
+\par 
+\par I say "\plain\f2\fs22\ul apparently defective\plain\f2\fs22 " above, since "Click Of Death" Iomega drives damage its cartridge's sectors. Then, once they've been damaged it replaces them with new sectors from the cartridge's spare sector pools. In other words, nothing was really wrong with the sectors it was replacing -- until it had damaged them itself or in misreading them believed them to be damaged -- then it replaced those previously good sectors with spares.  This destructive cycle repeats until all spare sectors have been consumed.
+\par 
+\par The primary function of this Iomega drive testing program is to induce this sort of behavior in the drive since sector damage is the most apparent symptom of a drive which is writing incorrectly to the cartridge.
+\par 
+\par \plain\f2\fs22\cf2\b Consequence:
+\par \plain\f2\fs22\b The fact that this cartridge's spare sectors have all been consumed during this simple reading and writing test, \plain\f2\fs22\b\ul STRONGLY SUGGESTS that this drive is seriously defective and should no longer be used.\plain\f2\fs22\ul 
+\par \plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Recourse:\plain\f2\fs22 
+\par If this cartridge contains valuable data, the data should be moved to safety immediately, then the cartridge should receive a "Long Format" on a \plain\f2\fs22\b known good Iomega drive\plain\f2\fs22  (i.e. a drive which has recently passed TIP testing.)
+\par 
+\par If the data can not be read from this cartridge on a known good drive then my commercial SpinRite utility can be used to repair and recover the cartridge's data, but \plain\f2\fs22\b\ul ONLY\plain\f2\fs22  use SpinRite with cartridges on Iomega drives that are known to be good. (SpinRite description and purchasing information can be found on my web site at: http://grc.com.)
+\par 
+\par At the time of this writing I plan to create another utility program for users of Iomega products.  It will be able to test Iomega drive products and also to perform short and long Iomega reformats.  Please check my web site at http://grc.com for further information on this next product.
+\par 
+\par \pard\qc\plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.\plain\f2\fs22 
+\par \pard\plain\f2\fs24 [fewspares]
+\par \pard\qc\plain\f2\fs44\b This Cartridge Has
+\par Very Few Available
+\par Spare Sectors
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 The drive reports that this cartridge's
+\par spare sector pools are nearly exhausted.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Background:\plain\f2\fs22 
+\par Zip and Jaz drives maintain spare sectors that are automatically called into use when an \plain\f2\fs22\ul apparently defective \plain\f2\fs22 sector is encountered during reading and writing.
+\par 
+\par I say "\plain\f2\fs22\ul apparently defective\plain\f2\fs22 " above, since "Click Of Death" Iomega drives damage its cartridge's sectors. Then, once they've been damaged it replaces them with new sectors from the cartridge's spare sector pools. In other words, nothing was really wrong with the sectors it was replacing -- until it had damaged them itself or in misreading them believed them to be damaged -- then it replaced those previously good sectors with spares.  This destructive cycle repeats until all spare sectors have been consumed.
+\par 
+\par \plain\f2\fs22\cf2\b Consequence:
+\par \plain\f2\fs22 The primary function of this Iomega drive testing program is to induce this sort of erroneous spare sector allocation since sector damage is the most apparent symptom of a drive which is writing incorrectly to the cartridge.
+\par 
+\par However, the fact that so many of this cartridge's spare sectors have \plain\f2\fs22\ul already\plain\f2\fs22  been consumed \plain\f2\fs22\b strongly suggests\plain\f2\fs22  that at some point in the past this cartridge came into contact with a bad Iomega drive . . . \plain\f2\fs22\ul even if the drive it is running on now is perfectly fine.\plain\f2\fs22 
+\par 
+\par This means that this drive testing program might detect sectors that were damaged by some \plain\f2\fs22\ul other\plain\f2\fs22  drive, for which the drive being tested now would be erroneously and unfairly blamed.
+\par 
+\par If no \plain\f2\fs22\ul additional\plain\f2\fs22  damage is caused by this current drive on this questionable cartridge, then you'll know this drive is working correctly, but if \plain\f2\fs22\ul new damage\plain\f2\fs22  is detected you won't know whether it was old damage only now being detected or new damage.
+\par 
+\par \plain\f2\fs22\cf2\b Recourse:\plain\f2\fs22 
+\par If you wish to proceed with the test using this questionable cartridge, press the "Press to Proceed" button in the upper right. Otherwise eject this cartridge and find another one to be used for this test.
+\par 
+\par If your goal is to determine whether this drive is functioning properly and reliably then testing it with the best cartridge will yield the clearest and most reliable results.
+\par 
+\par \pard\qc\plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.\plain\f2\fs22 
+\par \pard\plain\f2\fs24 
+\par [notrunning]
+\par \pard\qc\plain\f2\fs44\cf2\b Insert a cartridge,
+\par then press the
+\par "Press to Begin" button
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 This explanation page will help you
+\par to interpret the testing results once
+\par the testing is completed.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\b Please return to this page once the testing has finished.
+\par \plain\f2\fs22 
+\par To start testing insert a cartridge into your Iomega drive of choice then press the "Press to Begin" button at  the upper right.
+\par 
+\par You may interrupt the testing at any time by pressing the "Press to Stop" button at the upper right. However, final result interpretations will not be available unless the test is allowed to run to its conclusion.
+\par \pard\qc\plain\f2\fs16\i 
+\par *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [running]
+\par \pard\qc\plain\f2\fs44\cf2\b The Testing is
+\par Currently Underway
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 When the testing is completed this
+\par explanation page will help you to
+\par interpret the testing results.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\b Please return to this page once the testing has finished.
+\par \plain\f2\fs22 
+\par You may interrupt the testing at any time by pressing the "Press to Stop" button at the upper right. However, final result interpretations will not be available unless the test is allowed to run to its conclusion.
+\par \pard\qc\plain\f2\fs16\i 
+\par *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [interrupted]
+\par \pard\qc\plain\f2\fs44\cf2\b The Test was Interrupted before its Conclusion
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 The condition of this drive and
+\par cartridge is unknown because
+\par the test was not completed.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Analysis . . .\plain\f2\fs22 
+\par Although the drive and cartridge appear to be reasonably fine up to the point of interruption, conclusions can not be drawn from this partial testing.  To determine the condition of this drive and cartridge the test must run to its conclusion.
+\par 
+\par You may restart the test from the beginning by pressing the "Press to Begin" button in the upper right.
+\par \pard\qc\plain\f2\fs16\i 
+\par *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [perfectresult]
+\par \pard\qc\plain\f2\fs44\cf2\b This Drive & Cartridge are
+\par in \plain\f2\fs44\cf2\b\ul PERFECT CONDITION\plain\f2\fs44\cf2\b !
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 The drive and cartridge have together
+\par passed TIP's tests with flying colors!
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Congratulations!\plain\f2\fs22 
+\par \plain\f2\fs22\b\ul This test could not have run any more perfectly!\plain\f2\fs22\b 
+\par \plain\f2\fs22 Not one single problem of any sort was detected:
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   \plain\f2\fs22\b\ul No\plain\f2\fs22  sectors were difficult to locate,
+\par \plain\f5\fs24\cf1 \'b7\plain\f5\fs24   \plain\f2\fs22\b\ul No\plain\f2\fs22  sectors needed relocation,
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   \plain\f2\fs22\b\ul No\plain\f2\fs22  read or write errors of \plain\f2\fs22\ul any\plain\f2\fs22  sort occurred.
+\par 
+\par The \plain\f2\fs22\b ONLY WAY\plain\f2\fs22  this outcome could have been reached is if this drive and cartridge are \plain\f2\fs22\b BOTH\plain\f2\fs22  in \plain\f2\fs22\b FLAWLESS\plain\f2\fs22  working condition. (There's \plain\f2\fs22\ul NO trouble\plain\f2\fs22  in your paradise!)
+\par 
+\par \pard\qc\plain\f2\fs24\cf2\b You May Use this Drive & Cartridge
+\par with \plain\f2\fs24\cf2\b\ul Total\plain\f2\fs24\cf2\b  Confidence.
+\par \plain\f2\fs22 
+\par \plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [okayresult]
+\par \pard\qc\plain\f2\fs36\cf2\b This Drive & Cartridge Appear
+\par to be in Good, \plain\f2\fs36\cf2\b\i but Perhaps
+\par Not Perfect\plain\f2\fs36\cf2\b , Condition
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf1 The test has been somewhat inconclusive and should be \plain\f2\fs28\cf1\ul immediately\plain\f2\fs28\cf1  performed again.
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Analysis . . .\plain\f2\fs22 
+\par A relatively small number of completely correctable read/write errors occurred during the test, and resulted in one or more apparently questionable sectors being taken out of service.
+\par 
+\par This \plain\f2\fs22\ul can\plain\f2\fs22  be entirely normal operation for a completely healthy Zip or Jaz drive, particularly if this is the first time that a thorough disk scan of this sort has been performed after the cartridge has been in use for some time.
+\par 
+\par However, it can also be an \plain\f2\fs22\ul early\plain\f2\fs22  indication of drive trouble.
+\par 
+\par The test should be run again right now to see whether this pattern repeats: 
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   If \plain\f2\fs22\b\ul NO\plain\f2\fs22  additional troubles occur, then you can safely assume that the first pass actually \plain\f2\fs22\ul did\plain\f2\fs22  find and resolved a few true media defects -- which is common and expected behavior.
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   \plain\f2\fs22\b BUT . . .\plain\f2\fs22  if rerunning this test \plain\f2\fs22\ul AGAIN\plain\f2\fs22  has apparently located some new troubles (which the last test "missed", and finds a few more "apparently bad" sectors \plain\f2\fs22\b . . .\plain\f2\fs22  then you should conclude that this drive and/or cartridge is beginning to show early signs of 'Click Of Death' behavior.
+\par 
+\par \pard\qc\plain\f2\fs22\cf2\b If impending 'Click Of Death' seems indicated,
+\par the trick now is to determine whether the
+\par trouble is with the drive or with the cartridge.
+\par \pard\plain\f2\fs22 
+\par If you have another cartridge you should use it right away with the same drive under TIP to attempt to isolate the cause of the trouble as follows:
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   If another cartridge behaves similarly in the same drive, the trouble is more likely with the drive -- since the drive will have been the common element in both tests which were somewhat troubled.
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   But if a second cartridge behaves perfectly in the same drive (where the first one never did), then the trouble is more likely to be with the first cartridge -- since replacing the troubled element resolved the problems.
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   And if you have access to a second drive, you could try using the original cartridge in this second drive to gather additional objective evidence about the true behavior of the original drive and cartridge.
+\par 
+\par \plain\f2\fs22\cf2\b Conclusion:\plain\f2\fs22 
+\par As you can see, by using TIP to exercise various combinations of Iomega drives and cartridges, it will be possible for you to reach verifiable conclusions about the condition, behavior, and reliability of your Iomega removable storage products.
+\par 
+\par \plain\f2\fs22\cf1\b It is my sincere hope that this will result in more effective and satisfying personal computing experiences for everyone, and may help Iomega's users to enjoy their products while providing valuable feedback to Iomega.
+\par \plain\f2\fs22\cf1 
+\par \plain\f2\fs22\cf0 Please see the \plain\f2\fs22\cf0\b Next\plain\f2\fs22\cf0  panel in this program (by pressing the 'Next' button below) for information regarding Iomega's return policy for in-warranty and out-of-warranty drive products.
+\par 
+\par Their official spokesman has stated that Iomega will stand behind their products and that \plain\f2\fs22\cf0\b any drives will be replaced whether they are in warranty or not!\plain\f2\fs22\cf0   This is great news for people whose Iomega drives have been dying!\plain\f2\fs22 
+\par \pard\qc\plain\f2\fs16\i 
+\par *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.\plain\f2\fs22 
+\par \pard\plain\f2\fs24 [badresult]
+\par \pard\qc\plain\f2\fs44\cf1\b Something is VERY
+\par WRONG Somewhere.
+\par \plain\f2\fs16 
+\par \plain\f2\fs28\cf3 The test has encountered a suspiciously large number of problems while running!
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Analysis . . .\plain\f2\fs22 
+\par TIP has encountered a \plain\f2\fs22\b large\plain\f2\fs22  number of data-loss related troubles, demonstrating that this drive and cartridge are not getting along together at all!
+\par 
+\par Your task now is to determine the \plain\f2\fs22\b cause and source \plain\f2\fs22 of these troubles:
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   \plain\f2\fs22\b Is it the drive\plain\f2\fs22  which is not operating properly and reliably, thus creating these troubles on the cartridge?
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   Or, instead, were these troubles caused by a cartridge that had \plain\f2\fs22\b already been damaged\plain\f2\fs22  by its use in some other malfunctioning Zip drive?
+\par 
+\par \pard\qc\plain\f2\fs22\cf2\b If you have another cartridge or drive, you should use
+\par them with the same drive or cartridge to attempt
+\par to isolate the cause of the trouble as follows:
+\par \pard\plain\f2\fs22 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   \plain\f2\fs22\b If another cartridge behaves similarly in the same drive\plain\f2\fs22 , the trouble is more likely with the drive -- since the drive will have been the common element in both tests which were somewhat troubled.
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   But\plain\f2\fs22\b  if a second cartridge behaves perfectly in the same drive \plain\f2\fs22 (where the first one had serious problems), then the trouble is more likely to be with the first cartridge -- since replacing the troubled element resolved the problems.
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   And\plain\f2\fs22\b  if you have access to a second drive\plain\f2\fs22 , you could try using the original cartridge in this second drive to gather additional objective evidence about the true behavior of the original drive and cartridge. (Although, with troubles as extensive as this first cartridge experienced, the damage may be too extreme for a test with a second drive to be conclusive.)
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   Or \plain\f2\fs22\b if you do not have access to other equipment\plain\f2\fs22 , re-running the same TIP test on the same drive and cartridge might prove useful if TIP and the drive were able to repair some of the cartridge's initial damage. If the second use of TIP on the cartridge is substantially better than the first try, you could tentatively conclude that the cartridge was at fault, and that the drive is operating reliably.
+\par 
+\par \plain\f2\fs22\cf2\b Conclusion:\plain\f2\fs22 
+\par As you can see, by using TIP to exercise various combinations of Iomega drives and cartridges, it will be possible for you to reach verifiable conclusions about the condition, behavior, and reliability of your Iomega removable storage products.
+\par 
+\par \plain\f2\fs22\cf1\b It is my sincere hope that this will result in more effective and satisfying personal computing experiences for everyone, and may help Iomega's users to enjoy their products while providing valuable feedback to Iomega.
+\par \plain\f2\fs22\cf1 
+\par \plain\f2\fs22\cf0 Please see the \plain\f2\fs22\cf0\b Next\plain\f2\fs22\cf0  panel in this program (by pressing the 'Next' button below) for information regarding Iomega's return policy for in-warranty and out-of-warranty drive products.
+\par 
+\par Their official spokesman has stated that Iomega will stand behind their products and that \plain\f2\fs22\cf0\b any drives will be replaced whether they are in warranty or not!\plain\f2\fs22\cf0   This is great news for people whose Iomega drives have been dying!\plain\f2\fs22 
+\par \pard\qc\plain\f2\fs16\i 
+\par *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \plain\f2\fs22 
+\par \pard\plain\f2\fs24 [iomegaquote]
+\par \pard\qc\plain\f2\fs36\cf2\b So \plain\f2\fs36\cf2\b\ul WHAT CAN YOU DO\plain\f2\fs36\cf2\b  If Your Iomega Drive Has Click Of Death?\plain\f2\fs44\cf2\b 
+\par \plain\f2\fs22\cf2\b 
+\par \plain\f2\fs44\cf1\b THERE'S FANTASTIC NEWS,
+\par Directly from Iomega!\plain\f2\fs44\cf2\b 
+\par \plain\f2\fs16\cf0 
+\par \pard\plain\f2\fs22 Iomega's customers have believed that if their drive failed after the expiration of its one-year warranty that they were out of luck.
+\par 
+\par \pard\qc\plain\f2\fs28\cf3\b\ul But this turns out NOT to be the case at all!
+\par \pard\plain\f2\fs22  \plain\f2\fs24\cf0 
+\par \plain\f2\fs22\cf0 On June 16th 1998, I appeared on ZDTV's nationally televised 'Screen Savers' program to explain everything I'd learned about the Iomega Click Of Death problem. \plain\f2\fs22\cf0\b During the second half of the show we were joined -- over the telephone -- by Iomega's Spokesman and the General Manager of Zip Aftermarket Business, David Hellier.
+\par 
+\par \plain\f2\fs22\cf0 During his telephone statement, David surprised me by telling the whole world that \plain\f2\fs22\cf0\b Iomega would replace \plain\f2\fs22\cf0\b\ul any\plain\f2\fs22\cf0\b  drives suffering from CLICK OF DEATH \plain\f2\fs22\cf0\b\ul whether they are within warranty or not\plain\f2\fs22\cf0\b  !!!\plain\f2\fs22\cf0 
+\par 
+\par Here are David's exact words:
+\par 
+\par \plain\f2\fs22\cf0\i "I\plain\f2\fs22\i f our customers have a problem specific to this issue, whether it's in or out of warranty, we're going to take care of and replace the product if necessary."\plain\f2\fs22 
+\par 
+\par \plain\f2\fs22\cf2\b That's Right!
+\par \plain\f2\fs22 This means that you are no longer stuck with bad Zip and Jaz drives \plain\f2\fs22\b . . .\plain\f2\fs22  even if you've had the drive longer than one year! I'm very glad to be able to tell you that Iomega has decided to step up to the plate and take full responsibility for this problem!
+\par 
+\par \plain\f2\fs22\cf1\b . . . And \plain\f2\fs22\cf1\b\ul YOU\plain\f2\fs22\cf1\b  can hear him say this for yourself !
+\par \plain\f2\fs22 If you are running this program while you are connected to the Internet, or if your computer "knows" how to connect to the 'Net when you click on a URL-style link, you can use the two buttons below to quickly download two short (79k and 71k) wave files to hear David Hellier's statement for yourself!
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   The first button is his introduction of himself, by phone, during the television broadcast. The URL for this 79k wave file is:
+\par 
+\par \pard\qc\plain\f4\fs24 ftp://grc.com/hellier1.wav
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\b . . .\plain\f2\fs22  which you are welcome to eMail to your friends, post on other web sites, announce in newsgroups, or give to Iomega's Technical Support personnel if they have not yet received the great news that \plain\f2\fs22\ul Iomega has agreed to replace any out-of-warranty Click Of Death drives!\plain\f2\fs22 
+\par 
+\par \plain\f5\fs24\cf1 \'b7\plain\f2\fs22   The second button is the relevant excerpt from his full statement which comes as \plain\f2\fs22\b fabulous news\plain\f2\fs22  to the tens of thousands of troubled users of Iomega's products! (Iomega has estimated that perhaps as many as 100,000 users will be affected by these problems.) The URL for the 71k 2nd wave file is:
+\par \pard\qc\plain\f4\fs24 ftp://grc.com/hellier2.wav
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\b . . .\plain\f2\fs22  which you are similarly welcome to share with anyone who needs to hear it!
+\par 
+\par \pard\qc\plain\f2\fs24\cf1\b You may press the buttons below at any
+\par time to download these wave files.\plain\f2\fs24\cf1 
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b For additional background:
+\par \plain\f2\fs22 David Hellier's statement was made at the end of my segment of ZDTV's (Ziff-Davis Television) 'Screen Savers' program, and links to \plain\f2\fs22\b ZDTV's RealVideo clips\plain\f2\fs22  of \plain\f2\fs22\ul my\plain\f2\fs22  segment of the program can be found at my web site, and you can also find a link to ZDTV's page which they created for the show.
+\par 
+\par Unfortunately, the RealVideo clip provided by ZDTV's server cuts off just as David Hellier starts to make his statement -- presumably because it wasn't really relevant to the technical issues we were discussing. \plain\f2\fs22\b So if you would like to hear the AUDIO track for the ENTIRE show\plain\f2\fs22 , I have made that available on my web site at:
+\par 
+\par \pard\qc\plain\f4\fs24 http://grc.com/clickofdeath.ram
+\par \pard\plain\f2\fs22 
+\par . . . which you can listen to with a RealAudio player (which is free and also available through a link on my and ZDTV's site, and directly from http://www.real.com)  \plain\f2\fs22\b Just type that URL address (above) into your web browser . . . and you'll be listening to the audio track of the entire show!\plain\f2\fs22 
+\par 
+\par \pard\qc\plain\f2\fs22\i\ul Please note that ALL of this content from the TV show is the copyrighted property of Ziff-Davis TV, at \plain\f2\fs22\ul http://zdtv.com\plain\f2\fs22\i\ul .\plain\f2\fs22 
+\par \pard\plain\f2\fs22 
+\par \plain\f2\fs22\cf2\b Convincing Iomega that your drive \plain\f2\fs22\cf2\b\ul Really IS Bad\plain\f2\fs22\cf2\b  . . .
+\par \plain\f2\fs22\cf0 Obviously, replacing up to 100,000 Zip and Jaz drives in the field, will be quite expensive for Iomega. (But let's remember that up until now it's been \plain\f2\fs22\cf0\b very expensive\plain\f2\fs22\cf0  for Iomega's customers, who frequently lost \plain\f2\fs22\cf0\b not only their drives\plain\f2\fs22\cf0  but also their data as well.)
+\par 
+\par So, until this 'Trouble In Paradise' program has been around long enough to become known and trusted as the standard and reliable means for measuring Iomega drive health, I would not be surprised if Iomega were disinclined to take my program's word for the fact that your drives are defective.
+\par 
+\par \pard\qc\plain\f2\fs28\cf1\b So here's a work-around to help you
+\par get past this potential hurdle . . .
+\par \pard\plain\f2\fs22\cf2\b 
+\par \plain\f2\fs22\cf0 The standard Iomega "Long Format" operation, which can be easily performed using Iomega's DOS or Windows utilities, \plain\f2\fs22\cf0\ul will fail on many 'Click Of Death" drives!\plain\f2\fs22\cf0   So this provides you with another means -- \plain\f2\fs22\cf0\i not involving ANY non-Iomega third party software\plain\f2\fs22\cf0  -- for demonstrating to them that your drive is no longer functioning as it should.
+\par 
+\par \pard\qc\plain\f2\fs24\cf3\b Given a working cartridge, there is \plain\f2\fs24\cf3\b\ul ABSOLUTELY
+\par NO REASON\plain\f2\fs24\cf3\b  why an Iomega Long Format should
+\par fail . . . except if the drive is no longer even
+\par able to format one of its own cartridges!
+\par \pard\plain\f2\fs22\cf0 
+\par Since a Long Format performs a brief media recertification, this performs a less sensitive version of TIP's sensitive read/write testing \plain\f2\fs22\cf0\b . . .\plain\f2\fs22\cf0  and has the significant advantage of using \plain\f2\fs22\cf0\ul nothing\plain\f2\fs22\cf0  other than Iomega's own software.  Of course, doing this will wipe out any data that was on the cartridge beforehand, and may very well damage the cartridge permanently \plain\f2\fs22\cf0\b . . .\plain\f2\fs22\cf0  but all Iomega cartridges have always had a lifetime warranty, so you can get it replaced at the same time as your Click Of Death drive.
+\par 
+\par The Long Format provides much less feedback to you -- before, during, or after its operation -- than TIP does, so you'll never really know what's going on. It'll just fail with an error message, but that's all you'll need to show Iomega that your drive needs replacement.
+\par 
+\par Thus, this work-around gives you an inarguable position to take when getting Iomega to acknowledge that your drive is no longer safe to use and needs to be replaced under David Hellier's replacement policy.
+\par 
+\par \plain\f2\fs22\cf2\b In case you have trouble with Iomega's Technical Support:
+\par \plain\f2\fs22 Since the Technical Support for Iomega's products has been sub-contracted to a outside company, they may be unaware of Iomega's return and replacement policies for Click Of Death drives.
+\par 
+\par So, if you experience difficulty when dealing with Iomega's sub-contracted technical support, you may need to give David Hellier a phone call to let him know that the news of his policies have not yet filtered down to the appropriate persons handling product returns and replacements \plain\f2\fs22\b . . .\plain\f2\fs22  and ask him what you should do to get your drive replaced.
+\par 
+\par \pard\qc\plain\f2\fs22\cf1\b You can reach David at Iomega's main number:
+\par 1-801-778-1000, then ask to speak with David Hellier.
+\par \pard\plain\f2\fs22 
+\par Based upon the tremendous concern David demonstrated for the well-being of Iomega's customers (which you are welcome to hear for yourself -- in full -- on my web site), \plain\f2\fs22\b I am certain that David would want to know immediately if Iomega's customers were NOT receiving the treatment that he has said Iomega intends to provide to all of their customers.
+\par \plain\f2\fs22 Thus, you would be doing your part \plain\f2\fs22\ul for everyone who has these problems\plain\f2\fs22  by letting David know if his policies are not being correctly implemented by MCI Call Centers, the people who are handling Iomega's Technical Support.
+\par \pard\qc\plain\f2\fs96\cf1\b ~\plain\f2\fs96\b  \plain\f2\fs96\cf7\b ~\plain\f2\fs96\b  \plain\f2\fs96\cf2\b ~\plain\f2\fs96 
+\par \pard\plain\f2\fs22\cf2\b Well, this is Goodbye For Now . . .
+\par \plain\f2\fs22\cf0 I hope that you have found this 'Trouble In Paradise' Iomega drive and cartridge testing tool useful, and that it will serve as your trusted companion for the foreseeable future, providing you with tools and knowledge to increase the reliability of your Iomega data storage experiences.
+\par 
+\par Remember to check back with my web site at http://grc.com for updates and news of other related developments in this area!
+\par 
+\par As soon as the dust settles from this release of 'Trouble In Paradise', I'll be starting work on a new and inexpensive product which you'll be able to use to track, manage, and maintain all of your Iomega cartridges throughout their entire useful life.
+\par 
+\par If that sounds interesting to you, you can drop by my web site and add yourself to the 'Click Of Death' mailing list so that you'll receive automatic notification when this next goodie is ready for you!      The address is:  http://grc.com/codmailing.htm
+\par 
+\par Best luck to you!                                      \plain\f2\fs32\cf2\b\i -- Steve.\plain\f2\fs22\cf0     \plain\f2\fs16\cf0 6/28/98\plain\f2\fs16 
+\par \pard\qc\plain\f2\fs22 
+\par \plain\f2\fs16\i *Iomega, Zip, and Jaz are trademarks of Iomega Corporation.
+\par \pard\plain\f2\fs24 [EndOfText]
+\par }
+ 

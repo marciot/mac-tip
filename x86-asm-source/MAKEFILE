@@ -1,0 +1,87 @@
+PROJECT   = tip
+FULLNAME  = tip
+OBJ_CORE  = tip.obj font.obj rtf.obj sectors.obj
+RESOURCES = tip.ico
+
+ALL: $(PROJECT).exe
+
+#ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+#ณ                      Assembler and Linker Options			    ณ
+#ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+
+# LinkerOptions = /debug
+# AssemblerOptions = /c /Cx /coff /Zd /Zi /nologo
+
+AssemblerOptions = /c /Cx /coff /nologo
+LinkerOptions =
+
+#ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+#ณ                        Build Rule for Main Module			    ณ
+#ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+tip.obj : tip.asm aspi.asm new.asm tip.dat tip.txt makefile macros.inc
+	ML $(AssemblerOptions) tip.asm
+
+#ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+#ณ                    Build Rule for Compressed Modules			    ณ
+#ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+font.asm : font.bmp
+	compress font.bmp FontBitmapImage >font.asm
+
+#ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+#ณ                    Build Rule for Compressed Modules			    ณ
+#ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+rtf.asm : rtf.rtf
+	compress rtf.rtf RTF_Data >rtf.asm
+
+#ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+#ณ                    Build Rule for Compressed Modules			    ณ
+#ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+sectors.asm : sectors.bin
+	compress sectors.bin SECTOR_Data >sectors.asm
+
+#ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+#ณ                Inference Rule for Updating Object Files		    ณ
+#ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+.asm.obj:
+	ML /c /coff /nologo $<
+
+#ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+#ณ               Inference Rule for Updating Resource Files		    ณ
+#ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+.rc.res:
+	RC $<
+
+#ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+#ณ                        Build Rule for Executable			    ณ
+#ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+$(PROJECT).exe:	$(OBJ_CORE) $(OBJ_MORE) $(PROJECT).res
+	LINK $(LinkerOptions) @<<LinkFile
+/MACHINE:i386
+/SUBSYSTEM:WINDOWS,4.0
+/NOLOGO
+/PDB:NONE
+/ENTRY:Start
+/MAP:$(PROJECT).map
+/OUT:$(PROJECT).exe
+/RELEASE
+$(OBJ_CORE)
+explode.obj
+$(PROJECT).res
+USER32.LIB
+KERNEL32.LIB
+GDI32.LIB
+COMDLG32.LIB
+COMCTL32.LIB
+SHELL32.LIB
+<<NOKEEP
+#ฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤ
+	CHECKSUM $(PROJECT).exe
+#ฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤ
+	COPY $(PROJECT).exe RELEASE\$(FULLNAME).exe /Y
+	UPX --best -q RELEASE\$(FULLNAME).exe >nul
+	POSTUPX RELEASE\$(FULLNAME).exe 
+	CHECKSUM RELEASE\$(FULLNAME).exe
+	WAV c:\winnt\media\click.wav
+#ฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤ
+
+

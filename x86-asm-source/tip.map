@@ -1,0 +1,383 @@
+ tip
+
+ Timestamp is 43e4e92b (Sat Feb 04 09:49:31 2006)
+
+ Preferred load address is 00400000
+
+ Start         Length     Name                   Class
+ 0001:00000000 000053c2H .text                   CODE
+ 0002:00000000 000001e4H .idata$5                DATA
+ 0002:000001f0 00005ca4H .rdata                  DATA
+ 0002:00005e94 00000064H .idata$2                DATA
+ 0002:00005ef8 00000014H .idata$3                DATA
+ 0002:00005f0c 000001e4H .idata$4                DATA
+ 0002:000060f0 00000758H .idata$6                DATA
+ 0002:00006848 00000000H .edata                  DATA
+ 0003:00000000 00002f12H .data                   DATA
+ 0003:00002f14 0000038bH .bss                    DATA
+ 0004:00000000 00000330H .rsrc$01                DATA
+ 0004:00000330 00000dd8H .rsrc$02                DATA
+
+  Address         Publics by Value              Rva+Base     Lib:Object
+
+ 0001:00000000       _Start                     00401000     tip.obj
+ 0001:0000012e       _StartApplicationTimer@0   0040112e f   tip.obj
+ 0001:00000144       _StopApplicationTimer@0    00401144 f   tip.obj
+ 0001:00000160       _CheckPriorInstances@0     00401160 f   tip.obj
+ 0001:0000018e       _RegisterWindowClasses@0   0040118e f   tip.obj
+ 0001:0000021e       _CreateDIBPalette@0        0040121e f   tip.obj
+ 0001:0000024e       _ConvertBracketsToNulls@8  0040124e f   tip.obj
+ 0001:0000026d       _CreateStaticResources@0   0040126d f   tip.obj
+ 0001:0000046d       _SetPointSize@4            0040146d f   tip.obj
+ 0001:00000489       _CreateAppFonts@0          00401489 f   tip.obj
+ 0001:0000059d       _CreateAppWindows@0        0040159d f   tip.obj
+ 0001:000005f6       _DeleteStaticResources@0   004015f6 f   tip.obj
+ 0001:000006f2       _BinaryToDecimal@16        004016f2 f   tip.obj
+ 0001:00000730       _AsciiIze@4                00401730 f   tip.obj
+ 0001:00000751       _PaintBitmap@16            00401751 f   tip.obj
+ 0001:00000788       _SetControlText@8          00401788 f   tip.obj
+ 0001:000007ea       _DrawHyperlink@4           004017ea f   tip.obj
+ 0001:00000843       _ExecuteURL@4              00401843 f   tip.obj
+ 0001:00000880       _SetToStandardCursor@0     00401880 f   tip.obj
+ 0001:0000089e       _Paint3DHeadline@16        0040189e f   tip.obj
+ 0001:00000904       _WndProc@16                00401904 f   tip.obj
+ 0001:00001530       _SetTabErrorMode@4         00402530 f   tip.obj
+ 0001:000015a6       _PasswordWndProc@16        004025a6 f   tip.obj
+ 0001:00001610       _CenterWindow@4            00402610 f   tip.obj
+ 0001:00001666       _CreateChildControls@0     00402666 f   tip.obj
+ 0001:000016bd       _SetChildVisibility@8      004026bd f   tip.obj
+ 0001:00001734       _SetNavButtonEnable@8      00402734 f   tip.obj
+ 0001:000017a2       _SetCurrentWindow@0        004027a2 f   tip.obj
+ 0001:0000186d       _SinkWndProc@16            0040286d f   tip.obj
+ 0001:00001940       _SunkenFields@16           00402940 f   tip.obj
+ 0001:0000197a       _PaintTextArray@12         0040297a f   tip.obj
+ 0001:000019c0       _PaintTestPhase@4          004029c0 f   tip.obj
+ 0001:00001afa       _PaintCartStatus@4         00402afa f   tip.obj
+ 0001:00001ba6       _PaintBarGraph@36          00402ba6 f   tip.obj
+ 0001:00001d64       _PaintTheBarGraphs@8       00402d64 f   tip.obj
+ 0001:00001e41       _PaintCenteredString@28    00402e41 f   tip.obj
+ 0001:00001f33       _PaintCenteredValue@28     00402f33 f   tip.obj
+ 0001:00001f70       _PaintTestStatistics@8     00402f70 f   tip.obj
+ 0001:000021bf       _TestMonitorWndProc@16     004031bf f   tip.obj
+ 0001:00002359       _DataSource@12             00403359 f   tip.obj
+ 0001:00002389       _DataSink@12               00403389 f   tip.obj
+ 0001:000023b0       _DecompressBinary@4        004033b0 f   tip.obj
+ 0001:00002420       _ApplicationTimerProc@16   00403420 f   tip.obj
+ 0001:000024d4       _InitializeTheFloaterSystem@0 004034d4 f   tip.obj
+ 0001:00002509       _GetValidObjectHorzPos@0   00403509 f   tip.obj
+ 0001:0000252a       _GetValidObjectVertPos@0   0040352a f   tip.obj
+ 0001:0000254b       _MixEDXbyThree@0           0040354b f   tip.obj
+ 0001:0000256b       _PrepForFastBlitting@4     0040356b f   tip.obj
+ 0001:00002599       _AllocateSixteenColorDib@8 00403599 f   tip.obj
+ 0001:000025d7       _SplashTheBitmap@4         004035d7 f   tip.obj
+ 0001:00002628       _FloatTheFloaters@0        00403628 f   tip.obj
+ 0001:000026ba       _InitPositionAndVelocity@0 004036ba f   tip.obj
+ 0001:00002759       _BlitTheObjects@0          00403759 f   tip.obj
+ 0001:00002884       _FastTransparentBlt@0      00403884 f   tip.obj
+ 0001:00002947       _SetRichEditText@8         00403947 f   tip.obj
+ 0001:00002a70       _InitializeWizardControls@0 00403a70 f   tip.obj
+ 0001:00002c0c       _StreamSource@16           00403c0c f   tip.obj
+ 0001:00002c41       _ProcessPendingMessages@0  00403c41 f   tip.obj
+ 0001:00002c93       _UpdateRunTimeDisplay@0    00403c93 f   tip.obj
+ 0001:00002cca       _UpdateCurrentSector@0     00403cca f   tip.obj
+ 0001:00002d1b       _UpdateRunPhaseDisplay@0   00403d1b f   tip.obj
+ 0001:00002d42       _PreventProgramExit@0      00403d42 f   tip.obj
+ 0001:00002d95       _AllowProgramExit@0        00403d95 f   tip.obj
+ 0001:00002ded       _CopyCurrentPage@0         00403ded f   tip.obj
+ 0001:00002edc       _VerifyFileChecksum@0      00403edc f   tip.obj
+ 0001:00002f87       _ErrorSound@0              00403f87 f   tip.obj
+ 0001:0000302c       _CheckForASPI@0            0040402c f   tip.obj
+ 0001:000030a4       _HostAdapterInquiry@4      004040a4 f   tip.obj
+ 0001:000030df       _GetDeviceType@8           004040df f   tip.obj
+ 0001:00003121       _GetDriveEntryOffset@8     00404121 f   tip.obj
+ 0001:0000313b       _GetCommandDetails@4       0040413b f   tip.obj
+ 0001:0000316d       _SCSICommand@20            0040416d f   tip.obj
+ 0001:0000325d       _EnumerateIomegaDevices@0  0040425d f   tip.obj
+ 0001:000033d4       _GetModePage@20            004043d4 f   tip.obj
+ 0001:00003410       _SetModePage@12            00404410 f   tip.obj
+ 0001:00003455       _SetErrorRecovery@12       00404455 f   tip.obj
+ 0001:00003548       _GetNonSenseData@20        00404548 f   tip.obj
+ 0001:00003584       _UnlockAllMedia@0          00404584 f   tip.obj
+ 0001:000035d0       _LockCurrentDrive@0        004045d0 f   tip.obj
+ 0001:00003606       _SpinUpIomegaCartridge@8   00404606 f   tip.obj
+ 0001:0000363c       _EjectAllMedia@0           0040463c f   tip.obj
+ 0001:0000366f       _GetSpareSectorCounts@4    0040466f f   tip.obj
+ 0001:000038d7       _HandleDriveChanging@0     004048d7 f   tip.obj
+ 0001:00003bec       _GetElapsedTimeInSeconds@0 00404bec f   tip.obj
+ 0001:00003c2b       _PrepareToBeginTesting@0   00404c2b f   tip.obj
+ 0001:00003c62       _BumpErrorCounts@4         00404c62 f   tip.obj
+ 0001:00003cc4       _ReadSectors@12            00404cc4 f   tip.obj
+ 0001:00003d19       _WriteSectors@12           00404d19 f   tip.obj
+ 0001:00003d6e       _OpenDriveAccess@4         00404d6e f   tip.obj
+ 0001:00003deb       _CloseDriveAccess@0        00404deb f   tip.obj
+ 0001:00003dfb       _Win95DeviceIO@24          00404dfb f   tip.obj
+ 0001:00003e9d       _QualifyDrive@0            00404e9d f   tip.obj
+ 0001:00003f9c       _ExclusiveAccess@8         00404f9c f   tip.obj
+ 0001:00004061       _FillBufferThroughASPI@0   00405061 f   tip.obj
+ 0001:000040b3       _ReadPhysicalSectors@12    004050b3 f   tip.obj
+ 0001:00004150       _CompareBuffers@0          00405150 f   tip.obj
+ 0001:0000416d       _FindDriveLetter@0         0040516d f   tip.obj
+ 0001:0000422e       _EjectIomegaCartridge@8    0040522e f   tip.obj
+ 0001:0000432f       _PerformRegionTransfer@8   0040532f f   tip.obj
+ 0001:000045a8       _TestTheDisk@0             004055a8 f   tip.obj
+ 0001:000048a2       _CheckForPartitionTable@0  004058a2 f   tip.obj
+ 0001:00004921       _PerhapsBlastRecovery@0    00405921 f   tip.obj
+ 0001:00004a70       _explode@16                00405a70 f   explode.obj
+ 0001:0000510a       _AppendMenuA@16            0040610a f   USER32:USER32.dll
+ 0001:00005110       _BeginPaint@8              00406110 f   USER32:USER32.dll
+ 0001:00005116       _CloseClipboard@0          00406116 f   USER32:USER32.dll
+ 0001:0000511c       _CopyRect@8                0040611c f   USER32:USER32.dll
+ 0001:00005122       _CreateWindowExA@48        00406122 f   USER32:USER32.dll
+ 0001:00005128       _DefWindowProcA@16         00406128 f   USER32:USER32.dll
+ 0001:0000512e       _DeleteMenu@12             0040612e f   USER32:USER32.dll
+ 0001:00005134       _DialogBoxParamA@20        00406134 f   USER32:USER32.dll
+ 0001:0000513a       _DispatchMessageA@4        0040613a f   USER32:USER32.dll
+ 0001:00005140       _DrawEdge@16               00406140 f   USER32:USER32.dll
+ 0001:00005146       _EmptyClipboard@0          00406146 f   USER32:USER32.dll
+ 0001:0000514c       _EnableWindow@8            0040614c f   USER32:USER32.dll
+ 0001:00005152       _EndDialog@8               00406152 f   USER32:USER32.dll
+ 0001:00005158       _EndPaint@8                00406158 f   USER32:USER32.dll
+ 0001:0000515e       _EnumChildWindows@12       0040615e f   USER32:USER32.dll
+ 0001:00005164       _FindWindowA@8             00406164 f   USER32:USER32.dll
+ 0001:0000516a       _GetAsyncKeyState@4        0040616a f   USER32:USER32.dll
+ 0001:00005170       _GetClientRect@8           00406170 f   USER32:USER32.dll
+ 0001:00005176       _GetCursor@0               00406176 f   USER32:USER32.dll
+ 0001:0000517c       _GetDC@4                   0040617c f   USER32:USER32.dll
+ 0001:00005182       _GetDlgItem@8              00406182 f   USER32:USER32.dll
+ 0001:00005188       _GetDlgItemTextA@16        00406188 f   USER32:USER32.dll
+ 0001:0000518e       _GetMessageA@16            0040618e f   USER32:USER32.dll
+ 0001:00005194       _GetSysColor@4             00406194 f   USER32:USER32.dll
+ 0001:0000519a       _GetSystemMenu@8           0040619a f   USER32:USER32.dll
+ 0001:000051a0       _GetSystemMetrics@4        004061a0 f   USER32:USER32.dll
+ 0001:000051a6       _GetWindowLongA@8          004061a6 f   USER32:USER32.dll
+ 0001:000051ac       _GetWindowRect@8           004061ac f   USER32:USER32.dll
+ 0001:000051b2       _InvalidateRect@12         004061b2 f   USER32:USER32.dll
+ 0001:000051b8       _KillTimer@8               004061b8 f   USER32:USER32.dll
+ 0001:000051be       _LoadAcceleratorsA@8       004061be f   USER32:USER32.dll
+ 0001:000051c4       _LoadBitmapA@8             004061c4 f   USER32:USER32.dll
+ 0001:000051ca       _LoadCursorA@8             004061ca f   USER32:USER32.dll
+ 0001:000051d0       _LoadIconA@8               004061d0 f   USER32:USER32.dll
+ 0001:000051d6       _LockWindowUpdate@4        004061d6 f   USER32:USER32.dll
+ 0001:000051dc       _MessageBoxA@16            004061dc f   USER32:USER32.dll
+ 0001:000051e2       _MoveWindow@24             004061e2 f   USER32:USER32.dll
+ 0001:000051e8       _OpenClipboard@4           004061e8 f   USER32:USER32.dll
+ 0001:000051ee       _PeekMessageA@20           004061ee f   USER32:USER32.dll
+ 0001:000051f4       _PtInRect@12               004061f4 f   USER32:USER32.dll
+ 0001:000051fa       _PostQuitMessage@4         004061fa f   USER32:USER32.dll
+ 0001:00005200       _RegisterClassA@4          00406200 f   USER32:USER32.dll
+ 0001:00005206       _RegisterWindowMessageA@4  00406206 f   USER32:USER32.dll
+ 0001:0000520c       _ReleaseDC@8               0040620c f   USER32:USER32.dll
+ 0001:00005212       _SendMessageA@16           00406212 f   USER32:USER32.dll
+ 0001:00005218       _SetClipboardData@8        00406218 f   USER32:USER32.dll
+ 0001:0000521e       _SetCursor@4               0040621e f   USER32:USER32.dll
+ 0001:00005224       _SetFocus@4                00406224 f   USER32:USER32.dll
+ 0001:0000522a       _SetTimer@16               0040622a f   USER32:USER32.dll
+ 0001:00005230       _SetWindowLongA@12         00406230 f   USER32:USER32.dll
+ 0001:00005236       _SetWindowPos@28           00406236 f   USER32:USER32.dll
+ 0001:0000523c       _SetWindowTextA@8          0040623c f   USER32:USER32.dll
+ 0001:00005242       _ShowWindow@8              00406242 f   USER32:USER32.dll
+ 0001:00005248       _TranslateAcceleratorA@12  00406248 f   USER32:USER32.dll
+ 0001:0000524e       _TranslateMessage@4        0040624e f   USER32:USER32.dll
+ 0001:00005254       _UpdateWindow@4            00406254 f   USER32:USER32.dll
+ 0001:0000525a       _ValidateRect@8            0040625a f   USER32:USER32.dll
+ 0001:00005260       _wsprintfA                 00406260 f   USER32:USER32.dll
+ 0001:00005266       _Beep@8                    00406266 f   KERNEL32:KERNEL32.dll
+ 0001:0000526c       _CloseHandle@4             0040626c f   KERNEL32:KERNEL32.dll
+ 0001:00005272       _CreateEventA@16           00406272 f   KERNEL32:KERNEL32.dll
+ 0001:00005278       _CreateFileA@28            00406278 f   KERNEL32:KERNEL32.dll
+ 0001:0000527e       _DeviceIoControl@32        0040627e f   KERNEL32:KERNEL32.dll
+ 0001:00005284       _ExitProcess@4             00406284 f   KERNEL32:KERNEL32.dll
+ 0001:0000528a       _FreeLibrary@4             0040628a f   KERNEL32:KERNEL32.dll
+ 0001:00005290       _GetDriveTypeA@4           00406290 f   KERNEL32:KERNEL32.dll
+ 0001:00005296       _GetFileSize@8             00406296 f   KERNEL32:KERNEL32.dll
+ 0001:0000529c       _GetLocalTime@4            0040629c f   KERNEL32:KERNEL32.dll
+ 0001:000052a2       _GetModuleFileNameA@12     004062a2 f   KERNEL32:KERNEL32.dll
+ 0001:000052a8       _GetModuleHandleA@4        004062a8 f   KERNEL32:KERNEL32.dll
+ 0001:000052ae       _GetProcAddress@8          004062ae f   KERNEL32:KERNEL32.dll
+ 0001:000052b4       _GetSystemTimeAsFileTime@4 004062b4 f   KERNEL32:KERNEL32.dll
+ 0001:000052ba       _GetVersion@0              004062ba f   KERNEL32:KERNEL32.dll
+ 0001:000052c0       _GlobalAlloc@8             004062c0 f   KERNEL32:KERNEL32.dll
+ 0001:000052c6       _GlobalFree@4              004062c6 f   KERNEL32:KERNEL32.dll
+ 0001:000052cc       _LoadLibraryA@4            004062cc f   KERNEL32:KERNEL32.dll
+ 0001:000052d2       _lstrcatA@8                004062d2 f   KERNEL32:KERNEL32.dll
+ 0001:000052d8       _lstrcmpA@8                004062d8 f   KERNEL32:KERNEL32.dll
+ 0001:000052de       _lstrcmpiA@8               004062de f   KERNEL32:KERNEL32.dll
+ 0001:000052e4       _lstrcpyA@8                004062e4 f   KERNEL32:KERNEL32.dll
+ 0001:000052ea       _lstrlenA@4                004062ea f   KERNEL32:KERNEL32.dll
+ 0001:000052f0       _MulDiv@12                 004062f0 f   KERNEL32:KERNEL32.dll
+ 0001:000052f6       _ReadFile@20               004062f6 f   KERNEL32:KERNEL32.dll
+ 0001:000052fc       _RtlMoveMemory@12          004062fc f   KERNEL32:KERNEL32.dll
+ 0001:00005302       _RtlFillMemory@12          00406302 f   KERNEL32:KERNEL32.dll
+ 0001:00005308       _RtlZeroMemory@8           00406308 f   KERNEL32:KERNEL32.dll
+ 0001:0000530e       _SetErrorMode@4            0040630e f   KERNEL32:KERNEL32.dll
+ 0001:00005314       _SetFilePointer@16         00406314 f   KERNEL32:KERNEL32.dll
+ 0001:0000531a       _VirtualAlloc@16           0040631a f   KERNEL32:KERNEL32.dll
+ 0001:00005320       _VirtualFree@12            00406320 f   KERNEL32:KERNEL32.dll
+ 0001:00005326       _WaitForSingleObject@8     00406326 f   KERNEL32:KERNEL32.dll
+ 0001:0000532c       _BitBlt@36                 0040632c f   GDI32:GDI32.dll
+ 0001:00005332       _CreateCompatibleBitmap@12 00406332 f   GDI32:GDI32.dll
+ 0001:00005338       _CreateCompatibleDC@4      00406338 f   GDI32:GDI32.dll
+ 0001:0000533e       _CreateFontIndirectA@4     0040633e f   GDI32:GDI32.dll
+ 0001:00005344       _CreatePalette@4           00406344 f   GDI32:GDI32.dll
+ 0001:0000534a       _CreatePen@12              0040634a f   GDI32:GDI32.dll
+ 0001:00005350       _CreateSolidBrush@4        00406350 f   GDI32:GDI32.dll
+ 0001:00005356       _DeleteDC@4                00406356 f   GDI32:GDI32.dll
+ 0001:0000535c       _DeleteObject@4            0040635c f   GDI32:GDI32.dll
+ 0001:00005362       _GetDeviceCaps@8           00406362 f   GDI32:GDI32.dll
+ 0001:00005368       _GetStockObject@4          00406368 f   GDI32:GDI32.dll
+ 0001:0000536e       _GetTextExtentPointA@16    0040636e f   GDI32:GDI32.dll
+ 0001:00005374       _GetTextExtentPoint32A@16  00406374 f   GDI32:GDI32.dll
+ 0001:0000537a       _LineTo@12                 0040637a f   GDI32:GDI32.dll
+ 0001:00005380       _MoveToEx@16               00406380 f   GDI32:GDI32.dll
+ 0001:00005386       _RealizePalette@4          00406386 f   GDI32:GDI32.dll
+ 0001:0000538c       _Rectangle@20              0040638c f   GDI32:GDI32.dll
+ 0001:00005392       _SelectObject@8            00406392 f   GDI32:GDI32.dll
+ 0001:00005398       _SelectPalette@12          00406398 f   GDI32:GDI32.dll
+ 0001:0000539e       _SetBkMode@8               0040639e f   GDI32:GDI32.dll
+ 0001:000053a4       _SetDIBitsToDevice@48      004063a4 f   GDI32:GDI32.dll
+ 0001:000053aa       _SetTextColor@8            004063aa f   GDI32:GDI32.dll
+ 0001:000053b0       _TextOutA@20               004063b0 f   GDI32:GDI32.dll
+ 0001:000053b6       _InitCommonControls@0      004063b6 f   COMCTL32:COMCTL32.dll
+ 0001:000053bc       _ShellExecuteA@24          004063bc f   SHELL32:SHELL32.dll
+ 0002:00000000       __imp__InitCommonControls@0 00407000     COMCTL32:COMCTL32.dll
+ 0002:00000004       \177COMCTL32_NULL_THUNK_DATA 00407004     COMCTL32:COMCTL32.dll
+ 0002:00000008       __imp__MoveToEx@16         00407008     GDI32:GDI32.dll
+ 0002:0000000c       __imp__TextOutA@20         0040700c     GDI32:GDI32.dll
+ 0002:00000010       __imp__SetTextColor@8      00407010     GDI32:GDI32.dll
+ 0002:00000014       __imp__SetDIBitsToDevice@48 00407014     GDI32:GDI32.dll
+ 0002:00000018       __imp__SetBkMode@8         00407018     GDI32:GDI32.dll
+ 0002:0000001c       __imp__SelectPalette@12    0040701c     GDI32:GDI32.dll
+ 0002:00000020       __imp__SelectObject@8      00407020     GDI32:GDI32.dll
+ 0002:00000024       __imp__Rectangle@20        00407024     GDI32:GDI32.dll
+ 0002:00000028       __imp__RealizePalette@4    00407028     GDI32:GDI32.dll
+ 0002:0000002c       __imp__BitBlt@36           0040702c     GDI32:GDI32.dll
+ 0002:00000030       __imp__LineTo@12           00407030     GDI32:GDI32.dll
+ 0002:00000034       __imp__GetTextExtentPoint32A@16 00407034     GDI32:GDI32.dll
+ 0002:00000038       __imp__GetTextExtentPointA@16 00407038     GDI32:GDI32.dll
+ 0002:0000003c       __imp__GetStockObject@4    0040703c     GDI32:GDI32.dll
+ 0002:00000040       __imp__GetDeviceCaps@8     00407040     GDI32:GDI32.dll
+ 0002:00000044       __imp__DeleteObject@4      00407044     GDI32:GDI32.dll
+ 0002:00000048       __imp__DeleteDC@4          00407048     GDI32:GDI32.dll
+ 0002:0000004c       __imp__CreateSolidBrush@4  0040704c     GDI32:GDI32.dll
+ 0002:00000050       __imp__CreatePen@12        00407050     GDI32:GDI32.dll
+ 0002:00000054       __imp__CreatePalette@4     00407054     GDI32:GDI32.dll
+ 0002:00000058       __imp__CreateFontIndirectA@4 00407058     GDI32:GDI32.dll
+ 0002:0000005c       __imp__CreateCompatibleDC@4 0040705c     GDI32:GDI32.dll
+ 0002:00000060       __imp__CreateCompatibleBitmap@12 00407060     GDI32:GDI32.dll
+ 0002:00000064       \177GDI32_NULL_THUNK_DATA  00407064     GDI32:GDI32.dll
+ 0002:00000068       __imp__CreateEventA@16     00407068     KERNEL32:KERNEL32.dll
+ 0002:0000006c       __imp__LoadLibraryA@4      0040706c     KERNEL32:KERNEL32.dll
+ 0002:00000070       __imp__GlobalFree@4        00407070     KERNEL32:KERNEL32.dll
+ 0002:00000074       __imp__lstrcmpA@8          00407074     KERNEL32:KERNEL32.dll
+ 0002:00000078       __imp__WaitForSingleObject@8 00407078     KERNEL32:KERNEL32.dll
+ 0002:0000007c       __imp__VirtualFree@12      0040707c     KERNEL32:KERNEL32.dll
+ 0002:00000080       __imp__VirtualAlloc@16     00407080     KERNEL32:KERNEL32.dll
+ 0002:00000084       __imp__SetFilePointer@16   00407084     KERNEL32:KERNEL32.dll
+ 0002:00000088       __imp__SetErrorMode@4      00407088     KERNEL32:KERNEL32.dll
+ 0002:0000008c       __imp__RtlZeroMemory@8     0040708c     KERNEL32:KERNEL32.dll
+ 0002:00000090       __imp__RtlFillMemory@12    00407090     KERNEL32:KERNEL32.dll
+ 0002:00000094       __imp__RtlMoveMemory@12    00407094     KERNEL32:KERNEL32.dll
+ 0002:00000098       __imp__ReadFile@20         00407098     KERNEL32:KERNEL32.dll
+ 0002:0000009c       __imp__MulDiv@12           0040709c     KERNEL32:KERNEL32.dll
+ 0002:000000a0       __imp__lstrlenA@4          004070a0     KERNEL32:KERNEL32.dll
+ 0002:000000a4       __imp__lstrcpyA@8          004070a4     KERNEL32:KERNEL32.dll
+ 0002:000000a8       __imp__lstrcmpiA@8         004070a8     KERNEL32:KERNEL32.dll
+ 0002:000000ac       __imp__CreateFileA@28      004070ac     KERNEL32:KERNEL32.dll
+ 0002:000000b0       __imp__lstrcatA@8          004070b0     KERNEL32:KERNEL32.dll
+ 0002:000000b4       __imp__GlobalAlloc@8       004070b4     KERNEL32:KERNEL32.dll
+ 0002:000000b8       __imp__GetVersion@0        004070b8     KERNEL32:KERNEL32.dll
+ 0002:000000bc       __imp__GetSystemTimeAsFileTime@4 004070bc     KERNEL32:KERNEL32.dll
+ 0002:000000c0       __imp__GetProcAddress@8    004070c0     KERNEL32:KERNEL32.dll
+ 0002:000000c4       __imp__GetModuleHandleA@4  004070c4     KERNEL32:KERNEL32.dll
+ 0002:000000c8       __imp__GetModuleFileNameA@12 004070c8     KERNEL32:KERNEL32.dll
+ 0002:000000cc       __imp__GetLocalTime@4      004070cc     KERNEL32:KERNEL32.dll
+ 0002:000000d0       __imp__GetFileSize@8       004070d0     KERNEL32:KERNEL32.dll
+ 0002:000000d4       __imp__GetDriveTypeA@4     004070d4     KERNEL32:KERNEL32.dll
+ 0002:000000d8       __imp__FreeLibrary@4       004070d8     KERNEL32:KERNEL32.dll
+ 0002:000000dc       __imp__ExitProcess@4       004070dc     KERNEL32:KERNEL32.dll
+ 0002:000000e0       __imp__Beep@8              004070e0     KERNEL32:KERNEL32.dll
+ 0002:000000e4       __imp__CloseHandle@4       004070e4     KERNEL32:KERNEL32.dll
+ 0002:000000e8       __imp__DeviceIoControl@32  004070e8     KERNEL32:KERNEL32.dll
+ 0002:000000ec       \177KERNEL32_NULL_THUNK_DATA 004070ec     KERNEL32:KERNEL32.dll
+ 0002:000000f0       __imp__ShellExecuteA@24    004070f0     SHELL32:SHELL32.dll
+ 0002:000000f4       \177SHELL32_NULL_THUNK_DATA 004070f4     SHELL32:SHELL32.dll
+ 0002:000000f8       __imp__wsprintfA           004070f8     USER32:USER32.dll
+ 0002:000000fc       __imp__ValidateRect@8      004070fc     USER32:USER32.dll
+ 0002:00000100       __imp__UpdateWindow@4      00407100     USER32:USER32.dll
+ 0002:00000104       __imp__TranslateMessage@4  00407104     USER32:USER32.dll
+ 0002:00000108       __imp__TranslateAcceleratorA@12 00407108     USER32:USER32.dll
+ 0002:0000010c       __imp__ShowWindow@8        0040710c     USER32:USER32.dll
+ 0002:00000110       __imp__SetWindowTextA@8    00407110     USER32:USER32.dll
+ 0002:00000114       __imp__SetWindowPos@28     00407114     USER32:USER32.dll
+ 0002:00000118       __imp__SetWindowLongA@12   00407118     USER32:USER32.dll
+ 0002:0000011c       __imp__SetTimer@16         0040711c     USER32:USER32.dll
+ 0002:00000120       __imp__LoadCursorA@8       00407120     USER32:USER32.dll
+ 0002:00000124       __imp__LoadBitmapA@8       00407124     USER32:USER32.dll
+ 0002:00000128       __imp__SetFocus@4          00407128     USER32:USER32.dll
+ 0002:0000012c       __imp__SetCursor@4         0040712c     USER32:USER32.dll
+ 0002:00000130       __imp__SetClipboardData@8  00407130     USER32:USER32.dll
+ 0002:00000134       __imp__SendMessageA@16     00407134     USER32:USER32.dll
+ 0002:00000138       __imp__ReleaseDC@8         00407138     USER32:USER32.dll
+ 0002:0000013c       __imp__RegisterWindowMessageA@4 0040713c     USER32:USER32.dll
+ 0002:00000140       __imp__RegisterClassA@4    00407140     USER32:USER32.dll
+ 0002:00000144       __imp__PostQuitMessage@4   00407144     USER32:USER32.dll
+ 0002:00000148       __imp__PtInRect@12         00407148     USER32:USER32.dll
+ 0002:0000014c       __imp__PeekMessageA@20     0040714c     USER32:USER32.dll
+ 0002:00000150       __imp__OpenClipboard@4     00407150     USER32:USER32.dll
+ 0002:00000154       __imp__MoveWindow@24       00407154     USER32:USER32.dll
+ 0002:00000158       __imp__MessageBoxA@16      00407158     USER32:USER32.dll
+ 0002:0000015c       __imp__LockWindowUpdate@4  0040715c     USER32:USER32.dll
+ 0002:00000160       __imp__LoadIconA@8         00407160     USER32:USER32.dll
+ 0002:00000164       __imp__AppendMenuA@16      00407164     USER32:USER32.dll
+ 0002:00000168       __imp__InvalidateRect@12   00407168     USER32:USER32.dll
+ 0002:0000016c       __imp__GetWindowRect@8     0040716c     USER32:USER32.dll
+ 0002:00000170       __imp__GetWindowLongA@8    00407170     USER32:USER32.dll
+ 0002:00000174       __imp__GetSystemMetrics@4  00407174     USER32:USER32.dll
+ 0002:00000178       __imp__GetSystemMenu@8     00407178     USER32:USER32.dll
+ 0002:0000017c       __imp__GetSysColor@4       0040717c     USER32:USER32.dll
+ 0002:00000180       __imp__GetMessageA@16      00407180     USER32:USER32.dll
+ 0002:00000184       __imp__GetDlgItemTextA@16  00407184     USER32:USER32.dll
+ 0002:00000188       __imp__GetDlgItem@8        00407188     USER32:USER32.dll
+ 0002:0000018c       __imp__GetDC@4             0040718c     USER32:USER32.dll
+ 0002:00000190       __imp__GetCursor@0         00407190     USER32:USER32.dll
+ 0002:00000194       __imp__GetClientRect@8     00407194     USER32:USER32.dll
+ 0002:00000198       __imp__GetAsyncKeyState@4  00407198     USER32:USER32.dll
+ 0002:0000019c       __imp__FindWindowA@8       0040719c     USER32:USER32.dll
+ 0002:000001a0       __imp__EnumChildWindows@12 004071a0     USER32:USER32.dll
+ 0002:000001a4       __imp__EndPaint@8          004071a4     USER32:USER32.dll
+ 0002:000001a8       __imp__EndDialog@8         004071a8     USER32:USER32.dll
+ 0002:000001ac       __imp__EnableWindow@8      004071ac     USER32:USER32.dll
+ 0002:000001b0       __imp__EmptyClipboard@0    004071b0     USER32:USER32.dll
+ 0002:000001b4       __imp__DrawEdge@16         004071b4     USER32:USER32.dll
+ 0002:000001b8       __imp__DispatchMessageA@4  004071b8     USER32:USER32.dll
+ 0002:000001bc       __imp__DialogBoxParamA@20  004071bc     USER32:USER32.dll
+ 0002:000001c0       __imp__DeleteMenu@12       004071c0     USER32:USER32.dll
+ 0002:000001c4       __imp__DefWindowProcA@16   004071c4     USER32:USER32.dll
+ 0002:000001c8       __imp__CreateWindowExA@48  004071c8     USER32:USER32.dll
+ 0002:000001cc       __imp__CopyRect@8          004071cc     USER32:USER32.dll
+ 0002:000001d0       __imp__CloseClipboard@0    004071d0     USER32:USER32.dll
+ 0002:000001d4       __imp__BeginPaint@8        004071d4     USER32:USER32.dll
+ 0002:000001d8       __imp__LoadAcceleratorsA@8 004071d8     USER32:USER32.dll
+ 0002:000001dc       __imp__KillTimer@8         004071dc     USER32:USER32.dll
+ 0002:000001e0       \177USER32_NULL_THUNK_DATA 004071e0     USER32:USER32.dll
+ 0002:000001f0       _FontBitmapImage           004071f0     font.obj
+ 0002:00000510       _RTF_Data                  00407510     rtf.obj
+ 0002:00005920       _SECTOR_Data               0040c920     sectors.obj
+ 0002:00005e94       __IMPORT_DESCRIPTOR_USER32 0040ce94     USER32:USER32.dll
+ 0002:00005ea8       __IMPORT_DESCRIPTOR_KERNEL32 0040cea8     KERNEL32:KERNEL32.dll
+ 0002:00005ebc       __IMPORT_DESCRIPTOR_GDI32  0040cebc     GDI32:GDI32.dll
+ 0002:00005ed0       __IMPORT_DESCRIPTOR_COMCTL32 0040ced0     COMCTL32:COMCTL32.dll
+ 0002:00005ee4       __IMPORT_DESCRIPTOR_SHELL32 0040cee4     SHELL32:SHELL32.dll
+ 0002:00005ef8       __NULL_IMPORT_DESCRIPTOR   0040cef8     USER32:USER32.dll
+
+ entry point at        0001:00000000
+
+ Static symbols
+
+ 0001:00004bd0       _Expand@4                  00405bd0 f   explode.obj
+ 0001:00004cc0       _DecodeLit@4               00405cc0 f   explode.obj
+ 0001:00004e70       _DecodeDist@8              00405e70 f   explode.obj
+ 0001:00004ef0       _WasteBits@8               00405ef0 f   explode.obj
+ 0001:00004f90       _GenDecodeTabs@16          00405f90 f   explode.obj
+ 0001:00004fd0       _GenAscTabs@4              00405fd0 f   explode.obj
+ 0001:000050d0       _lmemcpy@12                004060d0 f   explode.obj

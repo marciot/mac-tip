@@ -1,0 +1,47 @@
+#define	APPNAME		TIP
+/////////////////////////////////////////////////////////////////////////////
+#define	IDB_BACK		0xFF00
+#define	IDB_NEXT		0xFF01
+#define	IDB_QUIT		0xFF02
+#define	VK_LEFT		0x0025
+#define	VK_RIGHT		0x0027
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+APPNAME ICON	DISCARDABLE     "tip.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Cursor
+//
+APPNAME CURSOR DISCARDABLE     "tip.cur"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+APPNAME ACCELERATORS MOVEABLE PURE 
+BEGIN
+    "b",            IDB_BACK,               ASCII,  ALT, NOINVERT
+    "B",            IDB_BACK,               ASCII,  ALT, NOINVERT
+    "b",            IDB_BACK,               ASCII,  NOINVERT
+    "B",            IDB_BACK,               ASCII,  NOINVERT
+    "<",            IDB_BACK,               ASCII,  NOINVERT
+    ",",            IDB_BACK,               ASCII,  NOINVERT
+    VK_LEFT,        IDB_BACK,               VIRTKEY, NOINVERT
+
+    "n",            IDB_NEXT,               ASCII,  ALT, NOINVERT
+    "N",            IDB_NEXT,               ASCII,  ALT, NOINVERT
+    "n",            IDB_NEXT,               ASCII,  NOINVERT
+    "N",            IDB_NEXT,               ASCII,  NOINVERT
+	 ">",            IDB_NEXT,               ASCII,  NOINVERT
+	 ".",            IDB_NEXT,               ASCII,  NOINVERT
+    VK_RIGHT,       IDB_NEXT,               VIRTKEY, NOINVERT
+
+    "x",            IDB_QUIT,               ASCII,  ALT, NOINVERT
+    "X",            IDB_QUIT,               ASCII,  ALT, NOINVERT
+    "x",            IDB_QUIT,               ASCII,  NOINVERT
+    "X",            IDB_QUIT,               ASCII,  NOINVERT
+END

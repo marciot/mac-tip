@@ -1,0 +1,3061 @@
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³  TIP.ASM                    TROUBLE IN PARADISE                05/22/98  ³
+;ÔÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¾
+;
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ TO DO ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;
+; o verify that disk status is being read correctly with External Zip drives
+;
+; o spell-check all rtf files and tip.txt
+;
+; o dynamically adapt to maximum adpater transfer length
+;
+; o handle completion debriefing
+;
+;-//////////////////////////////////////////////////////////////////////////-
+;
+; o determine TRUE maximum number of available JAZ relocations
+;   This still needs to be done, but for now I've clipped the test so if
+;   we are told there are more than the maximum we'll be okay.
+;
+; o lock drives for use under Win95/98 and NT ??????
+; o perhaps LOCKING the drive for exclusive use?
+;   Can't Lock drive for exclusive use, since the locking semantics are for
+;   LOGICAL (drive letter) devices, and there's no clear and simple API for
+;   determining the LOGICAL drive letter from the PHYSICAL SCSI device.
+;
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+include standard.inc
+include aspi.inc
+include richedit.inc
+include	commctrl.inc
+include	macros.inc
+
+DEVELOPMENT	= 1
+INITIAL_PAGE	= PERFORM_TEST_PAGE
+FORCE_TROUBLE 	= 0
+MINIMUM_VERSION	= 0	; set it to zero for NO minimum version checking
+
+EXTERNDEF	FontBitmapImage	:DWORD	; our floating "?" bitmap image
+EXTERNDEF	RTF_Data	:DWORD
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                  F U N C T I O N   P R O T O T Y P E S		    ³
+;ÔÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¾
+WndProc			PROTO	:HWND,  :UINT, :WPARAM, :LPARAM
+CenterWindow		PROTO 	:HWND
+DecompressBinary	PROTO	:LPVOID
+AllocateSixteenColorDib	PROTO	Hwidth:DWORD, Vheight:DWORD
+SplashTheBitmap		PROTO	hDC:HDC
+PrepForFastBlitting	PROTO	:HGLOBAL
+ApplicationTimerProc	PROTO	:HWND, :UINT, :UINT, :DWORD
+EjectIomegaCartridge	PROTO	Adapter:DWORD, Device:DWORD
+SpinUpIomegaCartridge	PROTO	Adapter:DWORD, Device:DWORD
+SetRichEditText		PROTO	phRichEditControl:LPHWND, pText:LPSTR
+PostToScreen		PROTO	PostVal:DWORD
+PasswordWndProc		PROTO	:HWND, :UINT, :WPARAM, :LPARAM
+
+SetTabErrorMode		PROTO	DisplayMode:BOOL
+EjectAllMedia		PROTO	; unlock and eject all drives
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                              E Q U A T E S				    ³
+;ÔÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¾
+WIZARD_WINDOW_HEIGHT	equ	337	; 358 - 19
+WIZARD_WINDOW_WIDTH	equ	467	; 480
+
+NUMBER_OF_FLOATERS	equ	6
+VELOCITY_MULTIPLIER	equ	1000
+
+SMALLER_FONT_SIZE	equ	8
+LARGER_FONT_SIZE	equ	10
+HEADLINE_FONT_SIZE	equ	21
+
+SPLASH_WIDTH		equ	120
+SPLASH_HEIGHT		equ	258
+
+FONT_WIDTH		equ	151
+FONT_HEIGHT		equ	251
+
+LOGO_1_LEFT		equ	157
+LOGO_1_TOP		equ	57
+
+LOGO_2_LEFT		equ	400
+LOGO_2_TOP		equ	17
+
+HYPERLINK_HEIGHT	equ	248
+
+FILE_TIME_TICKS_PER_SECOND	equ	10000000
+
+SOURCE_BITMAP_BYTE_WIDTH  equ	((FONT_WIDTH+31)/32)*4
+DEST_BITMAP_BYTE_WIDTH	  equ	(SPLASH_WIDTH / 2)
+FONT_TOP_OFFSET		  equ	SIZEOF BITMAPFILEHEADER + SIZEOF BITMAPINFOHEADER + 2*4 + ((FONT_HEIGHT-1) * SOURCE_BITMAP_BYTE_WIDTH)
+
+RANDOMULT		equ	0B6CAEB15h
+
+PALETTE_SIZE		equ	16	; Splash is a 16-color bitmap
+
+IDB_LINEUP		equ	WM_APP
+IDB_LINEDN		equ	WM_APP+1
+IDB_PAGEUP		equ	WM_APP+2
+IDB_PAGEDN		equ	WM_APP+3
+IDB_END			equ	WM_APP+4
+IDB_HOME		equ	WM_APP+5
+
+FLASH_COUNT		equ	16
+RANDOMULT		equ	0B6CAEB15h
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Password Dialog Defines ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+IDC_PASSWORD		equ	3
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Drive Array Status Flags ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+;				     +---- Device
+;				     | +--- Adapter
+;				     v v
+JAZ_DRIVE		equ	00010000h
+MEDIA_CHANGED		equ	00020000h
+DISK_EJECTING		equ	00040000h ; we've asked for eject and waiting ...
+MAX_DRIVE_COUNT		equ	16	; we can handle up to 16 Zip/Jaz drives
+
+FORMAT_STATUS_PAGE	equ	1
+DISK_STATUS_PAGE	equ	2
+ NEW_DISK_STATUS_OFFSET	equ	3	; newer offset of the Disk Status Byte
+ OLD_DISK_STATUS_OFFSET	equ	1	; older "	"	"	"
+
+JAZ_SPARES_COUNT_OFFSET			equ	68 ; offsets into DiskStat tbl
+NEW_ZIP_SIDE_0_SPARES_COUNT_OFFSET	equ	13
+NEW_ZIP_SIDE_1_SPARES_COUNT_OFFSET	equ	17
+OLD_ZIP_SIDE_0_SPARES_COUNT_OFFSET	equ	11
+OLD_ZIP_SIDE_1_SPARES_COUNT_OFFSET	equ	15
+JAZ_PROTECT_MODE_OFFSET			equ	21
+NEW_ZIP_PROTECT_MODE_OFFSET		equ	21
+OLD_ZIP_PROTECT_MODE_OFFSET		equ	19
+JAZ_LAST_LBA_OFFSET			equ	5
+NEW_ZIP_LAST_LBA_OFFSET			equ	5
+OLD_ZIP_LAST_LBA_OFFSET			equ	3
+
+MINIMUM_JAZ_SPARES			equ	500
+MAXIMUM_JAZ_SPARES			equ	2557
+MINIMUM_ZIP_SPARES			equ	50
+MAXIMUM_ZIP_SPARES			equ	126
+
+BYTES_PER_SECTOR	equ	512
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Cartridge Status ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+DISK_STATUS_UNKNOWN	equ	1
+DISK_AT_SPEED		equ	2
+DISK_SPINNING_UP	equ	3
+DISK_NOT_PRESENT	equ	4
+DISK_SPUN_DOWN		equ	5
+DISK_STALLED		equ	6
+DISK_Z_TRACK_FAILURE	equ	7
+DISK_PROTECTED		equ	8
+DISK_LOW_SPARES		equ	9
+DISK_TEST_UNDERWAY	equ	10
+DISK_TEST_FAILURE	equ	11
+;--------------------------------------------------------------------------
+LAST_CART_STATUS	equ	11
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Testing Phase Status ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+UNTESTED		equ	0
+READY_TO_TEST		equ	1
+TESTING_STARTUP		equ	2
+READING_DATA		equ	3
+WRITING_PATT		equ	4
+READING_PATT		equ	5
+WRITING_DATA		equ	6
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³                       NON-COMPRESSED GLOBAL DATA			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+				.data
+				ALIGN	4
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ ANIMATION MOTION CONSTANTS ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+xleft		DWORD	NUMBER_OF_FLOATERS dup (0)
+ytop		DWORD	NUMBER_OF_FLOATERS dup (FONT_TOP_OFFSET)
+xwidth		DWORD	NUMBER_OF_FLOATERS dup (FONT_WIDTH)
+yheight		DWORD	NUMBER_OF_FLOATERS dup (FONT_HEIGHT)
+transform	DWORD	NUMBER_OF_FLOATERS dup (Xform1)
+Xform1		DWORD	 4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 15, 15, 15, 15
+ObjectTypes	DWORD	0,1*4,2*4,3*4,4*4,5*4
+; this gives same-width objects different velocities, otherwise they
+; would all be running at exactly the same speed with boring overlaps
+velocities	DWORD	FONT_WIDTH,    FONT_WIDTH+20, FONT_WIDTH+40
+		DWORD	FONT_WIDTH+60, FONT_WIDTH+80, FONT_WIDTH+100
+
+LogoPalette	WORD	0300h		    ; LOGPALETTE HEADER WORDS
+		WORD	PALETTE_SIZE
+SplashPalette	DWORD	00A10303h, 00AD1F20h, 00B32E30h, 00B93E40h
+		DWORD	00BC4649h, 00C35559h, 00C65E62h, 00CB6A6Eh
+		DWORD	00D27A80h, 00DA8D93h, 00DF99A0h, 00E09DA4h
+		DWORD	00E6ABB3h, 00EDBCC5h, 00FCE1EAh, 00FEEAF1h
+
+FourBitMasks	DWORD	0000000Fh, 000000F0h, 00000F00h, 0000F000h
+		DWORD	000F0000h, 00F00000h, 0F000000h, 0F0000000h
+
+;ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ
+CommandDetailsTable		LABEL	BYTE ;  Command
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+db	SCSI_Cmd_RequestSense	, SRB_DIR_IN	; 03  IN == get from drive
+db	SCSI_Cmd_FormatUnit	, 0		; 04 OUT == send to drive
+db	SCSI_Cmd_NonSenseData	, SRB_DIR_IN	; 06
+db	SCSI_Cmd_Read		, SRB_DIR_IN	; 08
+db	SCSI_Cmd_Write		, SRB_DIR_OUT	; 0A
+db	SCSI_Cmd_CartProtect	, SRB_DIR_OUT	; 0C
+db	SCSI_Cmd_Inquiry	, SRB_DIR_IN	; 12
+db	SCSI_Cmd_ModeSelect	, SRB_DIR_OUT	; 15
+db	SCSI_Cmd_ModeSense	, SRB_DIR_IN	; 1A
+db	SCSI_Cmd_StartStopUnit	, 0		; 1B
+db	SCSI_Cmd_SendDiagnostic	, 0		; 1D
+db	SCSI_Cmd_PreventAllow	, 0		; 1E
+db	SCSI_Cmd_TranslateLBA	, SRB_DIR_IN	; 22
+db	SCSI_Cmd_FormatTest	, 0		; 24
+db	SCSI_Cmd_ReadMany	, SRB_DIR_IN	; 28
+db	SCSI_Cmd_WriteMany	, SRB_DIR_OUT	; 2A
+db	SCSI_Cmd_Verify		, 0		; 2F
+db	SCSI_Cmd_ReadDefectData	, SRB_DIR_IN	; 37
+;--------------------------------------------------------------------------
+LENGTH_OF_DETAILS_TABLE		= $ - CommandDetailsTable
+
+RichEditStreamIn	EDITSTREAM <NULL,NULL,OFFSET StreamSource>
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Test Monitor Panel Definitions ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+CS_Stat		RECT	<114,  8, 242, 28>
+TP_Perc		RECT	< 12, 56, 409, 72>
+SS_Jaz		RECT	< 12, 94, 409,126>
+SS_Sid0		RECT	< 12, 94, 409,110>
+TL_Sect		RECT	< 65,154, 193,170>
+ES_Read		RECT	<346,154, 409,170>
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³                         COMPRESSED GLOBAL DATA			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+			ALIGN	4
+StartEncryption		CHAR	"SOE!"
+;--------------------------------------------------------------------------
+include	tip.dat
+include	tip.txt
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+szAppName		CHAR	"TIP"
+szNullString		CHAR	0
+szWindowTitle		CHAR	" TIP -- Zip & Jaz Drive Tester",0
+
+szRedBitmap		CHAR	"REDBITMAP",0
+szGreenBitmap		CHAR	"GRNBITMAP",0
+szOffBitmap		CHAR	"OFFBITMAP",0
+
+ChildRegionRect		RECT	<0,0, 460,285>
+TabWindowRegionRect	RECT	<20,45, 440,270>
+SplashRect		RECT	<14,16,138,278>
+WebButton		RECT	<12,295,140,330>
+
+szCopyright_1		CHAR	"Copyright (c) 1998 by",0
+szCopyright_2		CHAR	"Gibson Research Corp.",0
+szCrLf			CHAR	CR,LF
+
+szASPI32DLLName		CHAR	"wnaspi32.dll",0
+szASPI32SupportInfo	CHAR	"GetASPI32SupportInfo",0
+szASPI32Command		CHAR	"SendASPI32Command",0
+szCloseCmd		CHAR	"Close",0
+szRichEditLibrary	CHAR	"RichEd32.Dll",0
+szIomega		CHAR	"Iomega",0
+szZip			CHAR	"Zip",0
+szJaz			CHAR	"Jaz",0
+
+; szInstructionText	CHAR	"instructions",0
+; szZtrackFailure	CHAR	"ztrackfailure",0
+; szVeryFewSpares	CHAR	"veryfewspares",0
+; szNoSpares		CHAR	"nospares",0
+; szOutOfSpares		CHAR	"outofspares",0
+; szLockedRtf
+
+szShellOpenOp		CHAR	"open",0
+szShellOpenFile		CHAR	"http://grc.com",0
+szWebFailedTitle	CHAR	"Unable to Launch a Web Browser",0
+szWebFailedText		CHAR	"TIP was unable to successfully launch",CR,LF
+			CHAR	"this system's Internet web Browser.",CR,LF
+			CHAR	CR,LF
+			CHAR	"Please check out the http://grc.com website",CR,LF
+			CHAR	"to find out what's new !",0
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+IF MINIMUM_VERSION
+szVersionErrorTitle	CHAR	"Windows Version Trouble",0
+szVersionErrorText	CHAR	"This 32-bit Windows client program requires",CR,LF
+ 			CHAR	"Windows 95/98 or later, or Windows NT 4.0 or",CR,LF
+			CHAR	"later,  These operating environments natively ",CR,LF
+			CHAR	"support the ",34,"ASPI for Win32",34," subsystem which",CR,LF
+			CHAR	"this program requires for operation.",0
+ENDIF
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+szArialFontName		CHAR	"Arial",0
+szCourierNew		CHAR	"Courier New",0
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+TypeTable	CHAR	"   Disk:","   Tape:","Printer:","    CPU:","   WORM:"
+		CHAR	" CD-ROM:","Scanner:","Optical:","JukeBox:","unknown!"
+
+DividingLine		CHAR	"--------------------------------------------------",CR,LF
+
+Removable		CHAR	"Remov"
+Fixed			CHAR	"Fixed"
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ FONT CREATION CONSTANTS ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+CurrentPage		DWORD	INITIAL_PAGE ; 0 -to- MAX ... the page we're seeing
+PreviousPage		DWORD	-1	; forces a first draw of every control
+ActionsSubPage		DWORD	FIRST_ACTION_PAGE
+;--------------------------------------------------------------------------
+OurTypeFaceSpec	DWORD	-9, 0, 0, 0	; both fonts are 9 pixels high
+OurFontWeight	DWORD	FW_NORMAL	; either bold or normal weight
+		BYTE	0
+OurUnderline	BYTE	0, 0
+OurCharSet	BYTE	DEFAULT_CHARSET
+OurFontPrecise	BYTE	OUT_RASTER_PRECIS, 0, PROOF_QUALITY
+PitchAndFamily	BYTE	0
+OurFontName	CHAR	"MS Sans Serif", 0
+
+szSide0		CHAR	"Side 0",0
+szSide1		CHAR	"Side 1",0
+szSpaceDashSpace	CHAR	" - ",0
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+			ALIGN	4
+EndEncryption		CHAR	"EOE!"
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+RandomSeed		DWORD	100
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Development Only Data ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+IF DEVELOPMENT
+POSTING_SPACE		equ	5
+szLongHexFormat		CHAR	" %08lX ",0	; a wsprintf format spec.
+szBarChartPercent	CHAR	" %ld%% ",0
+szCenteredDecimal	CHAR	"%ld",0
+szHoursMinsSecs		CHAR	"%ld:%02ld:%02ld",0
+LastPostedValue		DWORD	-1		; posting to the screen
+LastPostedTop		DWORD	0		; the height of the posting
+LastPostedLeft		DWORD	0
+ENDIF
+
+;--------------------------------------------------------------------------
+		                .data?
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³                    Uninitialized Static Global Data			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+hMainWnd		HWND	?	;
+MainWndMsg		MSG	<>
+hInst      		HINSTANCE ?	; and handle to our main instance
+hRichEditLibrary	HANDLE	?
+hAccel			HACCEL	?
+hCompletionEvent	HANDLE	?
+hApplicationTimer	DWORD	?
+hSplashPalette		HPALETTE ?
+CPUis386		BOOL	?
+WinNT			BOOL	?
+
+HyperlinkRect		RECT	<?>
+HyperlinkPoint		POINT	<?>
+hHyperlinkCursor	HCURSOR	?
+hStandardCursor		HCURSOR	?
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Pointers to all of the richtext blocks ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+pFontBitmap		LPVOID	?
+pSplashDIB		LPVOID	?
+pRTF_Data		LPVOID	?, ?	; pointer followed by stream length
+
+StreamPointer		LPBYTE	?	; pointer to richedit stream
+StreamEnd		LPBYTE	?	; pointer to past the end of stream
+
+hASPIDLL		HANDLE	?
+lpGetASPI32SupportInfo	LPVOID	?
+lpSendASPI32Command	LPVOID	?
+
+ASPI_CmdBlock		ScsiRequestBlock <>
+
+ErrorMode		BOOL	?
+hErrorMessage		HWND	?
+hRichEdit		HWND	?, ?	; handle and pTextLastSet
+hTabText		HWND	?, ?	; text appearing on the perform test
+hActionTabs		HWND	?
+hTestMonitor		HWND	?
+hTestButton		HWND	?
+hExitButton		HWND	?
+
+hNullPen		HPEN	?
+hWhitePen		HPEN	?
+hGrayPen		HPEN	?
+hDkGrayPen		HPEN	?
+hBlackPen		HPEN	?
+
+hNullBrush		HBRUSH	?
+hWhiteBrush		HBRUSH	?
+hGrayBrush		HBRUSH	?
+hDkGrayBrush		HBRUSH	?
+hBlackBrush		HBRUSH	?
+
+hNormalFont		HFONT	?	; 00 - small / normal
+hBoldFont		HFONT	?	; 01 - small / bold
+hDialogTextFont		HFONT	?	; 10 - large / normal
+hTitleFont		HFONT	?	; 11 - large / bold
+hHeadlineFont		HFONT	?	; way big font
+hFixedWidthFont		HFONT	?
+hDialogTextUnderlined	HFONT	?
+
+hRedBitmap		HBITMAP	?
+hGreenBitmap		HBITMAP	?
+hOffBitmap		HBITMAP	?
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ FastTransparentBlt Parameters ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+PixelsPerLine		DWORD	?
+PixelsToBlt		DWORD	?	; copied from PixelsPerLine per line
+LineCount		DWORD	?
+SourceLineStart		DWORD	?
+SourceBitStart		DWORD	?
+DestLineStart		DWORD	?
+DestBitStart		DWORD	?
+
+xform			DWORD	16 dup(?)
+
+HorzVelocity		DWORD	NUMBER_OF_FLOATERS dup (?)	; 16ù16 format
+VertVelocity		DWORD	NUMBER_OF_FLOATERS dup (?)	;    "    "
+HorzPosition		DWORD	NUMBER_OF_FLOATERS dup (?)	;    "    "
+VertPosition		DWORD	NUMBER_OF_FLOATERS dup (?)	;    "    "
+
+ActionButtonFlasher	DWORD	?
+
+pUserDataBuffer		LPVOID	?	; pointer to user's data
+pPatternBuffer		LPVOID	?	; pointer to test pattern
+
+DriveCount		DWORD	?
+DriveArray		DWORD	MAX_DRIVE_COUNT dup (?)
+CurrentAdapter		DWORD	?	; the adapter that's been recognized
+CurrentDevice		DWORD	?	; the device that's been recognized
+JazDrive		DWORD	BOOL	; true if the current drive is JAZ
+
+LastLBAOnCartridge	DWORD	?
+StartingInstant		FILETIME <?>
+NumberOfLBAs		DWORD	?
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Run Time Variables ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+CartridgeStatus		DWORD	DISK_NOT_PRESENT
+Side_0_SparesCount	DWORD	?	; JAZ has only one count
+Side_1_SparesCount	DWORD	?	; ZIP has counts for both sides
+CartridgePassword	CHAR	32+1 dup(?)
+TransferLength		DWORD	?
+SectorsPerTest		DWORD	?
+
+
+FirstTestingVariable	LABEL	DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+TestingPhase		DWORD	?	; 0 = not testing, no data ...
+PercentComplete		DWORD	?
+FirstLBASector		DWORD	?
+LastLBASector		DWORD	?
+SecondsElapsed		DWORD	?
+ReadDataRecovery	DWORD	?
+WriteDataRecovery	DWORD	?
+UnrecoverableData	DWORD	?
+SectorsNotFound		DWORD	?
+TracksNotFound		DWORD	?
+ElapsedTimeOfLastEstimate DWORD	?
+CurrentTotalTimeEstimate  DWORD	?
+UserInterrupt		DWORD	?
+LastError		DWORD	?
+SingleTransferLBA	DWORD	?
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+TESTING_VARIABLE_COUNT	equ	($ - FirstTestingVariable)/SIZEOF DWORD
+
+
+				.code
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                               WinMain				    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³									    ³
+;³  Startup the Windows program. If no previous instances are running then  ³
+;³  define and register a new window class, perform various initialization  ³
+;³  chores, then setup the main message loop.				    ³
+;³									    ³
+;ÔÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¾
+Start:	call	DecryptOurselves
+	call	Detect386Processor
+	invoke	GetVersion	; find out what platform we're running ...
+IF MINIMUM_VERSION
+	.IF (al < MINIMUM_VERSION)
+		invoke	MessageBox, NULL, ADDR szVersionErrorText, ADDR szVersionErrorTitle, MB_OK
+		invoke	ExitProcess, 1
+	.ENDIF
+ENDIF
+	.IF !(eax & 80000000h)
+		set	WinNT
+	.ENDIF
+	;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetModuleHandle, NULL	; get our module's handle
+	mov	hInst, eax
+	call	CheckPriorInstances
+	jc	Close
+	call	RegisterWindowClasses
+	jc	Close
+	call	CreateStaticResources
+	jc	Close
+	call	CreateAppWindows
+	jc	Close
+
+	;--------------------------------------------------------------------------
+	; so far so good. now see if we have aspi services ...
+	call	CheckForASPI		; returns the adapter count
+	.IF (eax)
+		; aspi is available, so count the Iomega devices
+		call	EnumerateIomegaDevices
+		.IF (eax == 1)
+			; we have only one, so select it for the user
+			movmov	byte ptr CurrentAdapter, al, byte ptr DriveArray[0]
+			movmov	byte ptr CurrentDevice, al, byte ptr DriveArray[1]
+		.ELSEIF (eax > 1)
+			; we have more than one, so eject'em all ...
+			call	EjectAllMedia
+		.ENDIF
+	.ENDIF
+	call	InitializeWizardControls
+	call	InitializeTheFloaterSystem
+	; now startup the timer for real-time features
+	invoke	SetTimer, NULL, NULL, 50, ADDR ApplicationTimerProc
+	mov	hApplicationTimer, eax
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Our application's message loop ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	invoke	ShowWindow, hMainWnd, SW_NORMAL
+	invoke	UpdateWindow, hMainWnd
+	.WHILE TRUE
+		invoke  GetMessage, ADDR MainWndMsg, NULL, 0, 0
+		.BREAK .IF (!eax)
+		invoke	TranslateAccelerator, hMainWnd, hAccel, ADDR MainWndMsg
+		.CONTINUE .IF (eax)	; skip if we handled
+		invoke  TranslateMessage, ADDR MainWndMsg
+		invoke  DispatchMessage,  ADDR MainWndMsg
+	.ENDW
+
+	call	UnlockAllMedia
+Close:	call	DeleteStaticResources
+	invoke	ExitProcess, MainWndMsg.wParam
+;-//////////////////////////////////////////////////////////////////////////-
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            DECRYPT OURSELVES				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+DecryptOurselves	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	esi, OFFSET StartEncryption
+	.IF (dword ptr [esi] != "!EOS")
+		mov	ecx, OFFSET EndEncryption
+		sub	ecx, esi
+		shr	ecx, 2
+		mov	edi, esi
+		.REPEAT
+			lodsd
+			xor	eax, 0AAAAAAAAh
+			stosd
+		.UNTILCXZ
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+DecryptOurselves	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          DETECT 386 PROCESSOR			    ³
+;³              Returns NON-ZERO if we have a 386 processor!		    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+Detect386Processor	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	ebx, esp	; save current stack pointer to align it
+	and	esp, not 3	; align stack to avoid AC fault
+	pushfd			; push original EFLAGS
+	pop	eax		; get original EFLAGS into EAX
+	mov	ecx, eax	; also hold them in ECX
+	xor	eax, 40000h	; invert the AC bit in EFLAGS
+	push	eax		; save for movement into EFLAGS
+	popfd			; copy into EFLAGS
+	pushfd			; push EFLAGS
+	pop	eax		; get new EFLAGS value
+	xor	eax, ecx	; see if it was settable
+	.IF !(eax & 40000h)	; if the bit could not be set ... CPU == 386
+		set	CPUis386
+	.ENDIF
+	mov	esp, ebx
+ 	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Detect386Processor	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          CHECK PRIOR INSTANCES			    ³
+;³     Check to see if we're already running and if so, un-minimize it	    ³
+;³     and bring it back to the top of the screen ... and terminate us	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+CheckPriorInstances	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	FindWindow, NULL, ADDR szWindowTitle
+	check	eax			; clears CY
+	.IF (!zero?)
+		push	eax		; save the window's hWnd
+		invoke	ShowWindow, eax, SW_SHOWNORMAL
+		pop	eax		; recover the window's hWnd
+		invoke	SetWindowPos, eax, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE OR SWP_NOSIZE
+		stc			; return carry to abort OUR instance
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CheckPriorInstances	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                         REGISTER WINDOW CLASSES			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+RegisterWindowClasses	PROC
+			LOCAL   wndclass:WNDCLASS
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	varzero	wndclass
+	movmov	wndclass.hInstance, eax, hInst
+	mov	wndclass.hbrBackground, COLOR_BTNFACE + 1
+	mov	wndclass.lpszClassName, OFFSET szAppName
+	invoke	LoadIcon, hInst, OFFSET szAppName
+	mov	wndclass.hIcon, eax
+	mov	wndclass.lpfnWndProc, OFFSET WndProc
+	invoke	RegisterClass, ADDR wndclass
+	sub	eax, 1
+	jc	Exit
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Register the TestMonitor Window Style ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	zero	eax
+	mov	wndclass.hbrBackground, eax
+	mov	wndclass.lpszClassName, OFFSET szTestMonitor
+	mov	wndclass.lpfnWndProc, OFFSET TestMonitorWndProc
+	invoke  RegisterClass, ADDR wndclass
+	sub	eax, 1
+	jc	Exit
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Register the 3D Sink Window Style ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	mov	wndclass.lpszClassName, OFFSET sz3DSink
+	mov	wndclass.lpfnWndProc, OFFSET SinkWndProc
+	invoke  RegisterClass, ADDR wndclass
+	sub	eax, 1
+	jc	Exit
+
+Exit:	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+RegisterWindowClasses	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                           CREATE DIB PALETTE				    ³
+;³       Create a 16-color palette.  This is used only when the target	    ³
+;³       system is running in 256-color mode.  It contains the image's	    ³
+;³       custom color set and is realized whenever our window is painted.   ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+CreateDIBPalette	PROC USES esi edi
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	esi, OFFSET SplashPalette	; get the palette data
+	mov	edi, esi
+	mov	ecx, PALETTE_SIZE		; the palette entry count
+	.REPEAT
+		lodsd			; .RGB
+		swap	ah, al		; .RBG
+		ror	eax, 8		; G.RB
+		swap	ah, al		; G.BR
+		rol	eax, 8		; .BRG
+		swap	ah, al		; .BGR
+		stosd
+	.UNTILCXZ
+	invoke	CreatePalette, ADDR LogoPalette
+	mov	hSplashPalette, eax
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CreateDIBPalette	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                        CONVERT BRACKETS TO NULLS			    ³
+;³  This scans the block of text converting all closing brackets ']' into   ³ 
+;³  NULLs so that a string compare can be used to find section blocks.	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+ConvertBracketsToNulls	PROC USES edi, pBuffer:DWORD, nLength:DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	al, ']'		; we'll be scanning for a closing ']'
+	mov	ecx, nLength	; for this many characters
+	mov	edi, pBuffer	; and at this point in the buffer
+	.WHILE (ecx)
+		repne scasb			; scan to a ']'
+		.BREAK .IF (!zero?)		; if we didn't find one, quit
+		mov	byte ptr [edi-1], 0	; found one!, so nuke it
+	.ENDW					; and look for another
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ConvertBracketsToNulls	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                         CREATE STATIC RESOURCES			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+CreateStaticResources	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	DecompressBinary, ADDR FontBitmapImage
+	mov	pFontBitmap, eax
+	invoke	PrepForFastBlitting, eax
+
+	invoke	DecompressBinary, ADDR RTF_Data
+	mov	pRTF_Data, eax
+	mov	pRTF_Data[4], ebx
+	invoke	ConvertBracketsToNulls, eax, ebx
+
+	invoke	GetStockObject, NULL_PEN
+	mov	hNullPen, eax
+	invoke	GetStockObject, BLACK_PEN
+	mov	hBlackPen, eax
+	invoke	GetStockObject, WHITE_PEN
+	mov	hWhitePen, eax
+	invoke	CreatePen, PS_SOLID, 1, LTGRAY_COLOR
+	mov	hGrayPen, eax
+	invoke	CreatePen, PS_SOLID, 1, GRAY_COLOR
+	mov	hDkGrayPen, eax
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Create System Brushes ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	invoke	GetStockObject, NULL_BRUSH
+	mov	hNullBrush, eax
+	invoke	GetStockObject, WHITE_BRUSH
+	mov	hWhiteBrush, eax
+	invoke	GetStockObject, LTGRAY_BRUSH
+	mov	hGrayBrush, eax
+	invoke	GetStockObject, DKGRAY_BRUSH
+	mov	hDkGrayBrush, eax
+	invoke	GetStockObject, BLACK_BRUSH
+	mov	hBlackBrush, eax
+
+	call	CreateAppFonts
+
+	invoke	LoadLibrary, ADDR szRichEditLibrary
+	mov	hRichEditLibrary, eax
+	sub	eax, 1			; make sure the library loaded
+	jc	Exit
+
+	invoke	LoadAccelerators, hInst, ADDR szAppName
+	mov	hAccel, eax
+
+	invoke	LoadCursor, NULL, IDC_ARROW
+	mov	hStandardCursor, eax
+
+	invoke	LoadCursor, hInst, ADDR szAppName
+	mov	hHyperlinkCursor, eax
+
+	invoke	CreateEvent, NULL, FALSE, FALSE, NULL
+	mov	hCompletionEvent, eax
+
+	invoke	LoadBitmap, hInst, ADDR szRedBitmap
+	mov	hRedBitmap, eax
+
+	invoke	LoadBitmap, hInst, ADDR szGreenBitmap
+	mov	hGreenBitmap, eax
+
+	invoke	LoadBitmap, hInst, ADDR szOffBitmap
+	mov	hOffBitmap, eax
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Allocate the Splash Animation DIB ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	invoke	AllocateSixteenColorDib, SPLASH_WIDTH, SPLASH_HEIGHT
+	mov	pSplashDIB, eax
+	add	eax, SIZEOF BITMAPINFOHEADER	; point to the palette
+	invoke	MoveMemory, eax, ADDR SplashPalette, 16*4
+	; now invert the SplashPalette and Create a GDI palette in case
+	; we're running on a 256-color system ...
+	invoke	CreateDIBPalette
+	clc
+Exit:	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CreateStaticResources	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                           SET FONT POINT SIZE			    ³
+;³   nHeight = -MulDiv (PointSize, GetDeviceCaps(hDC, LOGPIXELSY), 72)	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SetPointSize	PROC USES edi, PointSize:DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;	invoke	GetDC, 0			; get a display DC
+;	mov	edi, eax
+;	invoke	GetDeviceCaps, eax, LOGPIXELSY	; 96 or 120
+;	invoke	MulDiv, PointSize, eax, 72
+;	neg	eax
+;	mov	OurTypeFaceSpec, eax
+;	invoke	ReleaseDC, 0, edi
+
+	invoke	MulDiv, PointSize, 96, 72
+	neg	eax
+	mov	OurTypeFaceSpec, eax
+
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetPointSize	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            CREATE APP FONTS				    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³        This creates the four fonts we use throughout ChromaZone	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+CreateAppFonts	PROC USES edi
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	; if we're NOT running with standard "small fonts" then switch
+	; us over to ARIAL for our main font displays for pixel sizing
+	invoke	GetDC, 0
+	mov	edi, eax
+	invoke	GetDeviceCaps, eax, LOGPIXELSY	; 96 or 120
+	.IF (eax != 96)
+		invoke	lstrcpy, ADDR OurFontName, ADDR szArialFontName
+	.ENDIF
+	invoke	ReleaseDC, 0, edi
+
+	;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	OurFontWeight, FW_NORMAL
+	invoke	SetPointSize, SMALLER_FONT_SIZE
+	invoke	CreateFontIndirect, ADDR OurTypeFaceSpec
+	mov	hNormalFont, eax
+
+	invoke	SetPointSize, LARGER_FONT_SIZE
+	invoke	CreateFontIndirect, ADDR OurTypeFaceSpec
+	mov	hDialogTextFont, eax
+
+	set	OurUnderline
+	invoke	CreateFontIndirect, ADDR OurTypeFaceSpec
+	mov	hDialogTextUnderlined, eax
+	reset	OurUnderline
+
+	mov	OurFontWeight, FW_BOLD
+	invoke	SetPointSize, SMALLER_FONT_SIZE
+	invoke	CreateFontIndirect, ADDR OurTypeFaceSpec
+	mov	hBoldFont, eax
+
+	invoke	SetPointSize, LARGER_FONT_SIZE
+	invoke	CreateFontIndirect, ADDR OurTypeFaceSpec
+	mov	hTitleFont, eax
+
+	; make the larger Headline font
+	invoke	SetPointSize, HEADLINE_FONT_SIZE
+	invoke	lstrcpy, ADDR OurFontName, ADDR szArialFontName
+	invoke	CreateFontIndirect, ADDR OurTypeFaceSpec
+	mov	hHeadlineFont, eax
+
+	; now we work to create a fixed-width font ...
+	invoke	SetPointSize, LARGER_FONT_SIZE
+	mov	OurFontWeight, FW_NORMAL
+	mov	PitchAndFamily, FIXED_PITCH
+	invoke	lstrcpy, ADDR OurFontName, ADDR szCourierNew
+	invoke	CreateFontIndirect, ADDR OurTypeFaceSpec
+	mov	hFixedWidthFont, eax
+
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CreateAppFonts	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                           CREATE APP WINDOWS				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+CreateAppWindows	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetSystemMetrics, SM_CYCAPTION	; includes Y border
+	add	eax, WIZARD_WINDOW_HEIGHT
+	invoke	CreateWindowEx, WS_EX_APPWINDOW or WS_EX_DLGMODALFRAME,
+		ADDR szAppName, ADDR szWindowTitle, DS_NOIDLEMSG or WS_POPUP or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX,
+		0,0, WIZARD_WINDOW_WIDTH, eax, NULL, NULL, hInst, NULL
+	mov	hMainWnd, eax
+	check	eax
+	jz	Exit
+;--------------------------------------------------------------------------
+	call	CreateChildControls
+	jz	Exit
+;--------------------------------------------------------------------------
+	call	SetCurrentWindow
+	mov	eax, 1
+
+;--------------------------------------------------------------------------
+Exit:	sub	eax, 1	; set carry if we're returning a zero
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CreateAppWindows	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                         DELETE STATIC RESOURCES			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+DeleteStaticResources	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	KillTimer, NULL, hApplicationTimer
+
+	invoke	DeleteObject, hGrayPen
+	invoke	DeleteObject, hDkGrayPen
+	invoke	DeleteObject, hNormalFont
+	invoke	DeleteObject, hDialogTextFont
+	invoke	DeleteObject, hBoldFont
+	invoke	DeleteObject, hTitleFont
+	invoke	DeleteObject, hFixedWidthFont
+	invoke	DeleteObject, hHeadlineFont
+	invoke	DeleteObject, hDialogTextUnderlined
+	invoke	DeleteObject, hSplashPalette
+	invoke	DeleteObject, hRedBitmap
+	invoke	DeleteObject, hGreenBitmap
+	invoke	DeleteObject, hOffBitmap
+	invoke	GlobalFree,   pFontBitmap
+	invoke	GlobalFree,   pSplashDIB
+	invoke	GlobalFree,   pRTF_Data
+
+	invoke	CloseHandle, hCompletionEvent	; ASPI completion notification
+	invoke	FreeLibrary, hRichEditLibrary
+
+	mov	eax, hASPIDLL
+	.IF (esi)
+		invoke	FreeLibrary, eax
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+DeleteStaticResources	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            BINARY TO DECIMAL				    ³
+;³         Convert a 32-bit doubleword into its decimal equivalent	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+BinaryToDecimal	PROC	dest:PTR, val:DWORD, digits:DWORD, reorder:BOOL
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	ebx, dest		; determine where to store
+	mov	ecx, digits		; and how many digits to blank
+	.REPEAT
+		mov	byte ptr [ebx], SPACE
+		inc	ebx
+	.UNTILCXZ
+	mov	eax, val		; pick up the conversion value
+	.IF (reorder)			; abcd
+		ror	eax, 8		; dabc
+		swap	ah, al		; dacb
+		ror	eax, 16		; cbda
+		swap	ah, al		; cbad
+		ror	eax, 8		; dcba
+	.ENDIF
+	mov	ecx, 10			; convert to base 10
+	.REPEAT
+		dec	ebx		; move back to next digit
+		zero	edx		; clear the high end for division
+		div	ecx
+		add	dl, '0'
+		mov	[ebx], dl	; store the character
+	.UNTIL (!eax)
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+BinaryToDecimal	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                                ASCII IZE				    ³
+;³   Converts non-printing characters into SPACES, stops at the first CR.   ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+AsciiIze	PROC	dest:LPSTR
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	ebx, dest
+	.WHILE (byte ptr [ebx] != CR)
+		.IF (byte ptr [ebx] < SPACE) || (byte ptr [ebx] > '~')
+			mov	byte ptr [ebx], SPACE
+		.ENDIF
+		inc	ebx
+	.ENDW
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+AsciiIze	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                              PAINT BITMAP				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintBitmap	PROC	hDC:HDC, xpos:DWORD, ypos:DWORD, image:PTR
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	eax, image		; point to the top of the file
+	mov	ebx, eax		; point ebx to the bits
+	add	ebx, [eax + BITMAPFILEHEADER.bfOffBits]
+	add	eax, SIZEOF BITMAPFILEHEADER
+	zero	ecx
+	invoke	SetDIBitsToDevice, hDC, xpos, ypos, [eax + BITMAPINFOHEADER.biWidth], [eax + BITMAPINFOHEADER.biHeight],
+		0, 0, 0, [eax + BITMAPINFOHEADER.biHeight], ebx, eax, DIB_RGB_COLORS
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintBitmap	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            SET CONTROL TEXT				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SetControlText	PROC	hDC:WPARAM, hWnd:LPARAM
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetWindowLong, hWnd, GWL_ID
+	shr	eax, TREATMENT_STYLE_SHIFT
+	.IF	(eax == SMALL_NORMAL_TEXT)
+		mov	eax, hNormalFont	; 00 - small / normal
+	.ELSEIF (eax == SMALL_BOLD_TEXT)
+		mov	eax, hBoldFont		; 01 - small / bold
+	.ELSEIF (eax == LARGE_NORMAL_TEXT)
+		mov	eax, hDialogTextFont	; 10 - large / normal
+	.ELSEIF (eax == LARGE_BOLD_TEXT)
+		mov	eax, hTitleFont		; 11 - large / bold
+	.ELSEIF (eax == HEADLINE_TEXT)
+		mov	eax, hHeadlineFont
+	.ELSEIF (eax == TERMINAL_TEXT)
+		mov	eax, hFixedWidthFont
+	.ENDIF
+	invoke	SelectObject, hDC, eax
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetControlText	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                             DRAW HYPERLINK				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+DrawHyperlink	PROC	color:DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetDC, hMainWnd
+	mov	edi, eax
+	invoke	SetBkMode,    edi, TRANSPARENT
+	invoke	SelectObject, edi, hDialogTextUnderlined
+	invoke	SetTextColor, edi, color
+	invoke	TextOut, edi, HyperlinkPoint.x, HyperlinkPoint.y, ADDR szCheck_2, (szCheck_3 - szCheck_2)
+	invoke	ReleaseDC, hMainWnd, edi
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+DrawHyperlink	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                           LAUNCH GRC WEBSITE				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+LaunchGRCWebsite:
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	ShellExecute, NULL, ADDR szShellOpenOp,
+		ADDR szShellOpenFile, NULL, NULL, SW_NORMAL
+	.IF (eax <= 32)
+		call	SetToStandardCursor
+		invoke	MessageBox, hMainWnd, ADDR szWebFailedText, ADDR szWebFailedTitle, MB_OK
+	.ENDIF
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	ret
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                         SET TO STANDARD CURSOR			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SetToStandardCursor	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	SetCursor, hStandardCursor
+	.IF (eax == hHyperlinkCursor)
+		invoke	DrawHyperlink, BLUE_COLOR
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetToStandardCursor	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                                 WndProc				    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³               This is the system's main window procedure		    ³
+;ÔÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¾
+WndProc	PROC USES esi edi, hWnd:HWND, iMessage:UINT, wParam:WPARAM, lParam:LPARAM
+	LOCAL	ps:PAINTSTRUCT, Rect:RECT, MousePos:POINT
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+mov	eax, iMessage
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_CREATE : center the windoow					    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.IF     (eax == WM_CREATE)
+	invoke	CenterWindow, hWnd	; ... then return(0)
+	invoke	GetSystemMenu, hWnd, FALSE	; get sysmenu handle
+	invoke	DeleteMenu, eax, SC_MAXIMIZE, 0	; remove CLOSE
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_PAINT								    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF	(eax == WM_PAINT)
+	invoke	BeginPaint, hWnd, ADDR ps	; setup our paintstruct
+	mov	edi, eax			; save our painting handle
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Draw the Lower Horz Button Divider ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	invoke	SelectObject, edi, hDkGrayPen
+	invoke	MoveToEx, edi, 15, 289, NULL
+	invoke	LineTo, edi, 446, 289
+	invoke	SelectObject, edi, hWhitePen
+	invoke	LineTo, edi, 446, 290
+	invoke	LineTo, edi, 14, 290
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Draw the Gibson 'G' Logo ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	.IF (CurrentPage == INTRO_PAGE)
+
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	MoveToEx, edi, LOGO_1_LEFT+1,  LOGO_1_TOP+29, NULL
+		invoke	LineTo, edi, LOGO_1_LEFT+14, LOGO_1_TOP+29
+		invoke	LineTo, edi, LOGO_1_LEFT+14, LOGO_1_TOP+0
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, LOGO_1_LEFT+12, LOGO_1_TOP+0
+		invoke	LineTo, edi, LOGO_1_LEFT+0,  LOGO_1_TOP+12
+		invoke	LineTo, edi, LOGO_1_LEFT+0,  LOGO_1_TOP+30
+
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	MoveToEx, edi, LOGO_1_LEFT+18, LOGO_1_TOP+14, NULL
+		invoke	LineTo, edi, LOGO_1_LEFT+46, LOGO_1_TOP+14
+		invoke	LineTo, edi, LOGO_1_LEFT+46, LOGO_1_TOP+12
+		invoke	LineTo, edi, LOGO_1_LEFT+34, LOGO_1_TOP+0
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, LOGO_1_LEFT+17, LOGO_1_TOP+0
+		invoke	LineTo, edi, LOGO_1_LEFT+17, LOGO_1_TOP+15
+
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	MoveToEx, edi, LOGO_1_LEFT+33, LOGO_1_TOP+46, NULL
+		invoke	LineTo, edi, LOGO_1_LEFT+46, LOGO_1_TOP+46
+		invoke	LineTo, edi, LOGO_1_LEFT+46, LOGO_1_TOP+29
+		invoke	LineTo, edi, LOGO_1_LEFT+34, LOGO_1_TOP+17
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, LOGO_1_LEFT+32, LOGO_1_TOP+17
+		invoke	LineTo, edi, LOGO_1_LEFT+32, LOGO_1_TOP+47
+
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	MoveToEx, edi, LOGO_1_LEFT+1,  LOGO_1_TOP+35, NULL
+		invoke	LineTo, edi, LOGO_1_LEFT+12, LOGO_1_TOP+46
+		invoke	LineTo, edi, LOGO_1_LEFT+29, LOGO_1_TOP+46
+		invoke	LineTo, edi, LOGO_1_LEFT+29, LOGO_1_TOP+32
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, LOGO_1_LEFT+0,  LOGO_1_TOP+32
+		invoke	LineTo, edi, LOGO_1_LEFT+0,  LOGO_1_TOP+35
+
+;ÄÄÄÄÄÄÄÄÄÄÄ Paint the Splash Image Bitmap and the Web Hyperlink ÄÄÄÄÄÄÄÄÄÄÄÄ
+
+		; show the current logo bitmap
+		invoke	SplashTheBitmap, edi
+
+		invoke	SetBkMode, edi, TRANSPARENT
+		invoke	SelectObject, edi, hDialogTextFont
+		invoke	lstrlen, ADDR szCheck_1
+		invoke	TextOut, edi, BODY_LEFT, HYPERLINK_HEIGHT, ADDR szCheck_1, eax
+		invoke	GetTextExtentPoint, edi, ADDR szCheck_1, (szCheck_2 - szCheck_1), ADDR Rect
+		add	Rect.top, HYPERLINK_HEIGHT
+		invoke	lstrlen, ADDR szCheck_4
+		invoke	TextOut, edi, BODY_LEFT, Rect.top, ADDR szCheck_4, eax
+
+		invoke	SelectObject, edi, hDialogTextUnderlined
+		add	Rect.left, BODY_LEFT
+		movmov	HyperlinkRect.left, eax, Rect.left
+		mov	HyperlinkRect.top, HYPERLINK_HEIGHT
+
+		; draw the hyperlink text over the existing text
+		invoke	SetTextColor, edi, BLUE_COLOR
+		invoke	TextOut, edi, Rect.left, HYPERLINK_HEIGHT, ADDR szCheck_2, (szCheck_3 - szCheck_2)
+		; save the location for dynamic recoloring
+		movmov	HyperlinkPoint.x, eax, Rect.left
+		mov	HyperlinkPoint.y, HYPERLINK_HEIGHT
+
+		; save the enclosing rectangle for hot-spot sensing
+		invoke	GetTextExtentPoint, edi, ADDR szCheck_2, (szCheck_3 - szCheck_2), ADDR HyperlinkRect.right
+		mov	eax, HyperlinkRect.left
+		add	HyperlinkRect.right, eax
+		mov	eax, HyperlinkRect.top
+		add	HyperlinkRect.bottom, eax
+	.ENDIF
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Paint the Copyright Notice ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	.IF (CurrentPage < CREDITS_PAGE)
+		invoke	SetTextColor, edi, GRAY_COLOR
+		invoke	SetBkMode,    edi, TRANSPARENT
+		invoke	SelectObject, edi, hNormalFont
+		invoke	lstrlen, ADDR szCopyright_1
+		invoke	TextOut, edi, 15, 298, ADDR szCopyright_1, eax
+		invoke	lstrlen, ADDR szCopyright_2
+		invoke	TextOut, edi, 15, 311, ADDR szCopyright_2, eax
+	.ENDIF
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Draw the Gibson 'G' Logo ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	.IF (CurrentPage == CREDITS_PAGE)
+
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	MoveToEx, edi, LOGO_2_LEFT+1,  LOGO_2_TOP+29, NULL
+		invoke	LineTo, edi, LOGO_2_LEFT+14, LOGO_2_TOP+29
+		invoke	LineTo, edi, LOGO_2_LEFT+14, LOGO_2_TOP+0
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, LOGO_2_LEFT+12, LOGO_2_TOP+0
+		invoke	LineTo, edi, LOGO_2_LEFT+0,  LOGO_2_TOP+12
+		invoke	LineTo, edi, LOGO_2_LEFT+0,  LOGO_2_TOP+30
+
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	MoveToEx, edi, LOGO_2_LEFT+18, LOGO_2_TOP+14, NULL
+		invoke	LineTo, edi, LOGO_2_LEFT+46, LOGO_2_TOP+14
+		invoke	LineTo, edi, LOGO_2_LEFT+46, LOGO_2_TOP+12
+		invoke	LineTo, edi, LOGO_2_LEFT+34, LOGO_2_TOP+0
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, LOGO_2_LEFT+17, LOGO_2_TOP+0
+		invoke	LineTo, edi, LOGO_2_LEFT+17, LOGO_2_TOP+15
+
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	MoveToEx, edi, LOGO_2_LEFT+33, LOGO_2_TOP+46, NULL
+		invoke	LineTo, edi, LOGO_2_LEFT+46, LOGO_2_TOP+46
+		invoke	LineTo, edi, LOGO_2_LEFT+46, LOGO_2_TOP+29
+		invoke	LineTo, edi, LOGO_2_LEFT+34, LOGO_2_TOP+17
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, LOGO_2_LEFT+32, LOGO_2_TOP+17
+		invoke	LineTo, edi, LOGO_2_LEFT+32, LOGO_2_TOP+47
+
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	MoveToEx, edi, LOGO_2_LEFT+1,  LOGO_2_TOP+35, NULL
+		invoke	LineTo, edi, LOGO_2_LEFT+12, LOGO_2_TOP+46
+		invoke	LineTo, edi, LOGO_2_LEFT+29, LOGO_2_TOP+46
+		invoke	LineTo, edi, LOGO_2_LEFT+29, LOGO_2_TOP+32
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, LOGO_2_LEFT+0,  LOGO_2_TOP+32
+		invoke	LineTo, edi, LOGO_2_LEFT+0,  LOGO_2_TOP+35
+	.ENDIF
+
+;--------------------------------------------------------------------------
+	invoke	EndPaint, hWnd, ADDR ps		; returns zero if we process
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³ WM_MOUSEMOVE : change the mouse cursor when we're over the hyperlink	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_MOUSEMOVE) && (CurrentPage == INTRO_PAGE)
+	movsx	eax, word ptr lParam
+	mov	MousePos.x, eax
+	movsx	eax, word ptr lParam[2]
+	mov	MousePos.y, eax
+	invoke	PtInRect, ADDR HyperlinkRect, MousePos
+	.IF (eax)
+		invoke	SetCursor, hHyperlinkCursor
+		.IF (eax != hHyperlinkCursor)
+			invoke	DrawHyperlink, RED_COLOR
+		.ENDIF
+	.ELSE
+		call	SetToStandardCursor
+	.ENDIF
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³ WM_LBUTTONDOWN : Launch the web browser				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_LBUTTONDOWN) || (eax == WM_LBUTTONDBLCLK)
+	invoke	GetCursor
+	.IF (eax == hHyperlinkCursor)
+		call	LaunchGRCWebsite
+	.ENDIF
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³ WM_CTLCOLORBTN							    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_CTLCOLORBTN)
+	invoke	SetControlText, wParam, lParam
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³ WM_CTLCOLOREDIT							    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_CTLCOLOREDIT)
+	invoke	SetControlText, wParam, lParam
+	invoke	GetWindowLong, lParam, GWL_ID
+	.IF (ax == IDE_INSTR) || (ax == TAB_TEXT)
+		invoke	SetBkMode, wParam, TRANSPARENT
+		mov	eax, hNullBrush
+		jmp	Return
+	.ENDIF
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_CTLCOLORSTATIC : Static text					    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_CTLCOLORSTATIC)
+	invoke	SetControlText, wParam, lParam
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_DESTROY : we've been asked to leave, so drop out of the message loop  ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_DESTROY)
+	invoke  PostQuitMessage, 0	; ... then return(0)
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_NOTIFY : the current tab has changed				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_NOTIFY)
+	ASSUME	ebx:PTR NMHDR
+	mov	ebx, lParam	; get the pointer to the NMHDR structure
+	.IF ([ebx].code == TCN_SELCHANGE)
+		; save our PreviousPage since we're about to change it
+		movmov	PreviousPage, eax, CurrentPage
+		; it's a selection change event, so get the NEW tab
+		invoke	SendMessage, [ebx].hwndFrom, TCM_GETCURSEL, 0, 0
+		add	eax, FIRST_ACTION_PAGE
+		mov	CurrentPage, eax
+		mov	ActionsSubPage, eax
+		call	SetCurrentWindow
+	.ENDIF
+	ASSUME	ebx:NOTHING
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_COMMAND : a button was pressed					    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_COMMAND)
+	movmov	PreviousPage, eax, CurrentPage
+	movzx	eax, word ptr wParam	; get the button control ID
+	.IF	(eax == IDB_BACK) && (CurrentPage > 0)
+		dec	CurrentPage
+		; handle dropping into the proper of the ACTION pages
+		.IF (CurrentPage == LAST_ACTION_PAGE)
+			movmov	CurrentPage, eax, ActionsSubPage
+		.ELSEIF (CurrentPage < LAST_ACTION_PAGE) && (CurrentPage >= FIRST_ACTION_PAGE)
+			mov	CurrentPage, FIRST_ACTION_PAGE-1
+		.ENDIF
+		; handle skipping over the trouble page if everything is fine
+		.IF ((!ErrorMode) && (CurrentPage == TROUBLE_PAGE))
+			dec	CurrentPage
+		.ENDIF
+		call	SetCurrentWindow
+
+	.ELSEIF	(eax == IDB_NEXT) && (CurrentPage < LAST_PAGE)
+		inc	CurrentPage
+		; handle skipping over the trouble page if everything is fine
+		.IF ((!ErrorMode) && (CurrentPage == TROUBLE_PAGE))
+			inc	CurrentPage
+		.ENDIF
+		; handle dropping into the proper of the ACTION pages
+		.IF (CurrentPage == FIRST_ACTION_PAGE)
+			movmov	CurrentPage, eax, ActionsSubPage
+		.ELSEIF (CurrentPage > FIRST_ACTION_PAGE) && (CurrentPage <= LAST_ACTION_PAGE)
+			mov	CurrentPage, LAST_ACTION_PAGE+1
+		.ENDIF
+		call	SetCurrentWindow
+
+	.ELSEIF (eax == IDB_WEB)
+		call	LaunchGRCWebsite
+
+	.ELSEIF	(eax == IDB_QUIT) && (TestingPhase < TESTING_STARTUP)
+		invoke  PostQuitMessage, 0	; ... then return(0)
+
+	.ELSEIF	(eax == IDB_TEST)
+		.IF	(CartridgeStatus == DISK_SPUN_DOWN)
+			invoke	SpinUpIomegaCartridge, CurrentAdapter, CurrentDevice
+
+		.ELSEIF	(CartridgeStatus == DISK_AT_SPEED)
+			.IF (TestingPhase != READY_TO_TEST)
+				call	PrepareToBeginTesting
+			.ENDIF
+			call	TestTheDisk
+
+		.ELSEIF (CartridgeStatus == DISK_TEST_UNDERWAY)
+			set	UserInterrupt
+
+		.ELSEIF (CartridgeStatus == DISK_Z_TRACK_FAILURE) \
+		     || (CartridgeStatus == DISK_TEST_FAILURE) \
+		     || (CartridgeStatus == DISK_PROTECTED)
+			invoke	EjectIomegaCartridge, CurrentAdapter, CurrentDevice
+
+		.ELSEIF (CartridgeStatus == DISK_LOW_SPARES)
+			mov	CartridgeStatus, DISK_AT_SPEED
+			invoke	SetRichEditText, ADDR hTabText, ADDR szNullString
+			invoke	SetTabErrorMode, NULL
+			invoke	SetWindowText, hTestButton, ADDR szPressToStart
+
+		.ENDIF
+
+	.ELSEIF (CurrentPage == INSTRUCTION_PAGE)
+		mov	ebx, hRichEdit
+		call	ScrollRichEdit
+
+	.ELSEIF (CurrentPage == PERFORM_TEST_PAGE) || (CurrentPage == EXPLAIN_RESULTS)
+		mov	ebx, hTabText
+		call	ScrollRichEdit
+
+	.ELSE
+		jmp	DefaultProc
+	.ENDIF
+	jmp	ReturnZero
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_SYSCOMMAND : a system command was received ...			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF (eax == WM_SYSCOMMAND)
+	mov	eax, wParam	; get the specific command
+	; abort any close attempt while we're running ...
+	.IF ((eax == SC_CLOSE) || (eax == SC_DEFAULT)) && (TestingPhase >= TESTING_STARTUP)
+		jmp	ReturnZero
+	.ENDIF
+	jmp	DefaultProc
+
+;ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ
+.ELSE
+DefaultProc:	invoke  DefWindowProc, hWnd, iMessage, wParam, lParam
+		jmp	Return	; and return the DefWindowProc's return status ...
+.ENDIF
+ReturnZero:	zero	eax	; return that we haven't handled.
+		jmp	Return
+ReturnTrue:	zero	eax	; show that WE'VE handled this message
+		not	eax
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Return:		ret
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³                            Local Subroutines				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+ScrollRichEdit:	.IF	(eax == IDB_LINEUP)
+			invoke	SendMessage, ebx, EM_SCROLL, SB_LINEUP, 0
+		.ELSEIF (eax == IDB_LINEDN)
+			invoke	SendMessage, ebx, EM_SCROLL, SB_LINEDOWN, 0
+		.ELSEIF	(eax == IDB_PAGEUP)
+			invoke	SendMessage, ebx, EM_SCROLL, SB_PAGEUP, 0
+		.ELSEIF	(eax == IDB_PAGEDN)
+			invoke	SendMessage, ebx, EM_SCROLL, SB_PAGEDOWN, 0
+		.ELSEIF	(eax == IDB_END)
+			invoke	SendMessage, ebx, WM_VSCROLL, SB_BOTTOM, NULL
+		.ELSEIF	(eax == IDB_HOME)
+			invoke	SendMessage, ebx, WM_VSCROLL, SB_TOP, NULL
+		.ENDIF
+		LocalReturn
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WndProc	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            PASSWORD WND PROC				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PasswordWndProc	PROC USES esi, hWnd:HWND, iMessage:UINT, wParam:WPARAM, lParam:LPARAM
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+mov	eax, iMessage
+;----------------------------------------------------------------------------
+; WM_INITDIALOG : set the focus to the edit field
+;----------------------------------------------------------------------------
+.IF	(eax == WM_INITDIALOG)
+	invoke	GetDlgItem, hWnd, IDC_PASSWORD
+	invoke	SetFocus, eax
+	jmp	ReturnZero
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_COMMAND : a button was pressed					    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.ELSEIF	(eax == WM_COMMAND)
+	movzx	eax, word ptr wParam	; get the button control ID
+	.IF	(eax == IDOK)
+		mov	esi, 1
+		jmp	CloseDlg
+	.ELSEIF	(eax == IDCANCEL)
+		zero	esi
+CloseDlg:	invoke	GetDlgItemText, hWnd, IDC_PASSWORD, ADDR CartridgePassword, 32
+		invoke	EndDialog, hWnd, esi
+	.ENDIF
+.ELSE
+ReturnZero:	zero	eax	; return that we haven't handled.
+		jmp	Return
+.ENDIF
+ReturnNonZero:	zero	eax
+		dec	eax
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Return:		ret
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PasswordWndProc	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                              CenterWindow				    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³              This centers the HWND window on the screen		    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+CenterWindow	PROC USES ebx, hWnd:HWND	; handle of the window to center
+		LOCAL	WndPos:RECT	; local temp structure defining wnd
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+		invoke	GetWindowRect, hWnd, ADDR WndPos ; get window dimens
+
+		invoke	GetSystemMetrics, SM_CXSCREEN	; return screen width
+		sub	eax, WndPos.right		; now compute the
+		add	eax, WndPos.left			; horizontal margin
+		halve	eax				; cut it in half
+		push	eax				; save new left
+
+		invoke	GetSystemMetrics, SM_CYSCREEN	; return screen height
+		pop	edx				; recover the new left
+		sub	eax, WndPos.bottom		; now compute the
+		add	eax, WndPos.top			; vertical margin
+		halve	eax				; cut it in half
+		mov	ecx, eax			; save new right
+
+		mov	ebx, WndPos.right	; since we're FORCED to provide
+		sub	ebx, WndPos.left	; a new width, let's recompute
+		inc	ebx			; it from the existing width
+
+		mov	eax, WndPos.bottom	; and we'll do the same for
+		sub	eax, WndPos.top		; the old and new heights
+		inc	eax
+
+		invoke	MoveWindow, hWnd, edx, ecx, ebx, eax, TRUE ; and move it!
+		ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CenterWindow	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          CREATE CHILD CONTROLS			    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³             This creates all static windows for our program		    ³
+;³       Now create the block of standard windows from our array ...	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+CreateChildControls	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	esi, OFFSET WindowCreationTable
+	mov	edi, WINDOW_CREATION_ENTRIES
+	.REPEAT
+		push	dword ptr NULL		; no window creation data
+		push	hInst			; our local hInstance
+		push	dword ptr [esi+32]	; Ctrl ID
+		mov	ebx, [esi+28]		; get the parent's offset
+		.IF (ebx)			; if parent's offset non-null
+			mov	ebx, [ebx]	; then load its value
+		.ENDIF
+		push	ebx			; hWndParent
+		push	dword ptr [esi+24]	; nHeight
+		push	dword ptr [esi+20]	; nWidth
+		push	dword ptr [esi+16]	; y
+		push	dword ptr [esi+12]	; x
+		push	dword ptr [esi+ 8]	; the Style
+		push	dword ptr [esi+ 4]	; stack the window's name
+		push	dword ptr [esi   ]	; stack the ClassName
+		push	dword ptr 0		; NULL extended style
+		call	CreateWindowEx
+		check	eax			; if create failed
+		jz	AbortedCreation		; then take us out!
+		;------------------------------------------------------------
+		mov	ebx, [esi+36]		; get the destination offset
+		.IF (ebx)			; if we have a place to store
+			mov	[ebx], eax	; the resulting hWnd, do so
+		.ENDIF
+		add	esi, SIZE_OF_CREATE_ENTRY ; bump up to the next entry
+		dec	edi
+	.UNTIL (zero?)
+	dec	edi		; dec DI again to clear the ZERO flag ...
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+AbortedCreation:	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CreateChildControls	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          SET CHILD VISIBILITY			    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³  Sets the CurrentPage based window visibility state for the window whose ³
+;³  handle we're being handed. This is an enumeration of all hMainWnd.   ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SetChildVisibility	PROC hWnd:HWND, lParam:LPARAM
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetWindowLong, hWnd, GWL_ID	; pickup the child's ID
+	and	eax, PAGE_MASK
+	shr	eax, PAGE_SHIFT	; convert ID to control's page number
+	.IF (eax == ACTION_PAGES)	; if it's on all three pages
+		.IF (CurrentPage >= FIRST_ACTION_PAGE) && (CurrentPage <= LAST_ACTION_PAGE)
+			jmp	ShowTheControl
+		.ENDIF
+		jmp	HideTheControl
+
+	.ELSEIF (eax != EVERY_PAGE); munge only if it's NOT on every page
+		.IF (eax == CurrentPage)
+ShowTheControl:		invoke	GetWindowLong, hWnd, GWL_STYLE
+			or	eax, WS_VISIBLE
+		.ELSE
+HideTheControl:		invoke	GetWindowLong, hWnd, GWL_STYLE
+			and	eax, NOT WS_VISIBLE
+		.ENDIF
+		invoke	SetWindowLong, hWnd, GWL_STYLE, eax
+	.ENDIF
+	mov	eax, TRUE	; return non-zero to continue enumerating ...
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetChildVisibility	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                        SET NAV BUTTON ENABLE				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SetNavButtonEnable	PROC USES edi, id:DWORD, enabled:DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetDlgItem, hMainWnd, id	; get the handle
+	mov	edi, eax			; save hWnd in EDI
+	mov	ebx, enabled			; get the presence bitarray
+	mov	cl, byte ptr PreviousPage	; get the PREVIOUS Page
+	shr	ebx, cl				; "1" bit has PREVIOUS status
+	mov	eax, enabled			; get the presence bitarray
+	mov	cl, byte ptr CurrentPage	; get the CURRENT Page
+	shr	eax, cl				; "1" bit has CURRNET status
+	xor	ebx, eax			; one bit has "delta"
+	.IF (ebx & 1)
+		shr	eax, 1			; place new status into CARRY
+		.IF (carry?)
+			invoke	GetWindowLong, edi, GWL_STYLE
+			and	eax, NOT WS_DISABLED
+		.ELSE
+			invoke	GetWindowLong, edi, GWL_STYLE
+			or	eax, WS_DISABLED
+		.ENDIF
+		invoke	SetWindowLong, edi, GWL_STYLE, eax
+		invoke	InvalidateRect, edi, NULL, TRUE
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetNavButtonEnable	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³          This sets the visibility of windows for a given page	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SetCurrentWindow	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	ValidateRect, hMainWnd, NULL
+	invoke	LockWindowUpdate, hMainWnd
+	invoke	EnumChildWindows, hMainWnd, ADDR SetChildVisibility, NULL
+	invoke	LockWindowUpdate, NULL
+	.IF	(PreviousPage >= FIRST_ACTION_PAGE) && (PreviousPage <= LAST_ACTION_PAGE)\
+	     && (CurrentPage  >= FIRST_ACTION_PAGE) && (CurrentPage  <= LAST_ACTION_PAGE)
+		invoke	InvalidateRect, hMainWnd, ADDR TabWindowRegionRect, TRUE
+	.ELSE
+		invoke	InvalidateRect, hMainWnd, ADDR ChildRegionRect, TRUE
+	.ENDIF
+
+	.IF (PreviousPage >= FIRST_ACTION_PAGE) || (CurrentPage >= FIRST_ACTION_PAGE)
+		invoke	InvalidateRect, hMainWnd, ADDR WebButton, TRUE
+	.ENDIF
+	invoke	SetNavButtonEnable, IDB_BACK, BackButtonEnabled
+	invoke	SetNavButtonEnable, IDB_NEXT, NextButtonEnabled
+	invoke	UpdateWindow, hMainWnd
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetCurrentWindow	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                             3D SINK WndProc				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SinkWndProc	PROC USES esi edi, hWnd:HWND, msg:DWORD, wParam:WPARAM, lParam:LPARAM
+	 	LOCAL	ps:PAINTSTRUCT, Rect:RECT
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	eax, msg
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_PAINT : Simply pass this onto the Dialog's Frame painter ...	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.IF (eax == WM_PAINT)
+	invoke	BeginPaint, hWnd, ADDR ps	; setup our paintstruct
+	mov	edi, eax
+	invoke	GetClientRect, hWnd, ADDR Rect
+	invoke	GetWindowLong, hWnd, GWL_ID
+	shr	eax, TREATMENT_STYLE_SHIFT
+	.IF (ax == THREE_DEE_BOX)
+		invoke	DrawEdge, edi, ADDR Rect, EDGE_SUNKEN, BF_RECT
+	.ELSEIF (ax != NO_SINK_OUTLINE)
+		dec	Rect.right
+		dec	Rect.bottom
+		invoke	MoveToEx, edi, 0, Rect.bottom, NULL
+		invoke	SelectObject, edi, hDkGrayPen
+		invoke	LineTo, edi, 0, 0
+		invoke	LineTo, edi, Rect.right, 0
+		invoke	SelectObject, edi, hWhitePen
+		invoke	LineTo, edi, Rect.right, Rect.bottom
+		invoke	LineTo, edi, -1, Rect.bottom
+	.ENDIF
+	invoke	EndPaint, hWnd, ADDR ps		; returns zero if we process
+.ELSE
+	invoke  DefWindowProc, hWnd, msg, wParam,lParam
+.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SinkWndProc	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                              SUNKEN FIELDS				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SunkenFields	PROC USES esi edi, hDC:HDC, pFirstRect:LPRECT, count:DWORD, yspacing:DWORD
+		LOCAL	DrawRect:RECT
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	CopyRect, ADDR DrawRect, pFirstRect	; make a local copy
+	mov	edi, hDC
+	mov	esi, count
+	.REPEAT
+		invoke	DrawEdge, edi, ADDR DrawRect, BDR_SUNKENOUTER, BF_RECT
+		mov	eax, yspacing
+		add	DrawRect.top, eax
+		add	DrawRect.bottom, eax
+		dec	esi
+	.UNTIL (zero?)
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SunkenFields	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            PAINT TEXT ARRAY				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintTextArray	PROC USES esi edi, hdc:HDC, pArray:LPVOID, color:DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	edi, hdc
+	invoke	SetTextColor, edi, color
+	mov	esi, pArray
+	.REPEAT
+		add	esi, SIZEOF DWORD	; skip past the coords
+		invoke	lstrlen, esi
+		movzx	ebx, word ptr [esi-4]
+		movzx	ecx, word ptr [esi-2]
+		invoke	TextOut, edi, ebx, ecx, esi, eax
+		invoke	lstrlen, esi
+		inc	eax		; account for the last zero
+		add	esi, eax	; point to the next set of coords
+	.UNTIL	!(word ptr [esi])
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintTextArray	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            PAINT TEST PHASE				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintTestPhase	PROC USES esi edi, hdc:HDC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	edi, hdc
+	invoke	CreateCompatibleDC, NULL ; and a DC for our bitmap source
+	mov	esi, eax
+	invoke	SelectObject, esi, hOffBitmap
+	push	eax
+	;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	.IF (TestingPhase == READING_DATA)
+		invoke	SelectObject, esi, hGreenBitmap
+		push	eax
+	.ENDIF
+	invoke	BitBlt, edi, 252, 5, 11, 11, esi, 0, 0, SRCCOPY
+	.IF (TestingPhase == READING_DATA)
+		pop	eax
+		invoke	SelectObject, esi, eax
+	.ENDIF
+	;--------------------------------------------------------------------------
+	.IF (TestingPhase == WRITING_PATT)
+		invoke	SelectObject, esi, hRedBitmap
+		push	eax
+	.ENDIF
+	invoke	BitBlt, edi, 337, 5, 11, 11, esi, 0, 0, SRCCOPY
+	.IF (TestingPhase == WRITING_PATT)
+		pop	eax
+		invoke	SelectObject, esi, eax
+	.ENDIF
+	;--------------------------------------------------------------------------
+	.IF (TestingPhase == READING_PATT)
+		invoke	SelectObject, esi, hGreenBitmap
+		push	eax
+	.ENDIF
+	invoke	BitBlt, edi, 337,21, 11, 11, esi, 0, 0, SRCCOPY
+	.IF (TestingPhase == READING_PATT)
+		pop	eax
+		invoke	SelectObject, esi, eax
+	.ENDIF
+	;--------------------------------------------------------------------------
+	.IF (TestingPhase == WRITING_DATA)
+		invoke	SelectObject, esi, hRedBitmap
+		push	eax
+	.ENDIF
+	invoke	BitBlt, edi, 252,21, 11, 11, esi, 0, 0, SRCCOPY
+	.IF (TestingPhase == WRITING_DATA)
+		pop	eax
+		invoke	SelectObject, esi, eax
+	.ENDIF
+	;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	pop	eax
+	invoke	SelectObject, esi, eax
+	invoke	DeleteDC, esi
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintTestPhase	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            PAINT CART STATUS				    ³
+;³               Paints the textual cartridge status window		    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintCartStatus	PROC USES esi edi, hDC:HDC
+		LOCAL	TextSize:_SIZE
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	edi, hDC
+	; set DC's default text modes
+	invoke	SetTextColor, edi, BLACK_COLOR
+	invoke	SelectObject, edi, hDialogTextFont
+	invoke	SetBkMode,    edi, TRANSPARENT
+	; blank out any previous status display
+	invoke	SelectObject, edi, hNullPen
+	invoke	SelectObject, edi, hGrayBrush
+	invoke	Rectangle, edi, 115, 9, 241, 27
+	; display the new cartridge status
+	mov	eax, CartridgeStatus
+	dec	eax
+	.IF (sign?) || (eax > (LAST_CART_STATUS-1))
+		zero	eax
+	.ENDIF
+	; pickup the pointer to the string
+	mov	esi, CartStatStrings[eax*4]
+	invoke	lstrlen, esi
+	lea	ebx, TextSize
+	invoke	GetTextExtentPoint32, edi, esi, eax, ebx
+	mov	ebx, (241+115)/2	; get the center X
+	halve	TextSize._cx
+	sub	ebx, TextSize._cx
+	invoke	lstrlen, esi
+	invoke	TextOut, edi, ebx, 9, esi, eax
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintCartStatus	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                             PAINT BAR GRAPH				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintBarGraph	PROC USES esi edi, hDC:HDC, Xleft:DWORD, Ytop:DWORD, Xwidth:DWORD, Yheight:DWORD, BarColor:DWORD, BarValue:DWORD, pRightText:DWORD, Active:BOOL
+		LOCAL	AbsoluteBarWidth:DWORD, Extent:_SIZE, PercentString[8]:CHAR
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	; create a temporary drawing bitmap for double-buffererd rendering
+	invoke	GetDC, hTestMonitor
+	mov	esi, eax		; hold the creation DC in esi
+	invoke	CreateCompatibleBitmap, esi, Xwidth, Yheight
+	swap	esi, eax		; eax gets DC, esi gets bitmap
+	invoke	ReleaseDC, hTestMonitor, eax
+
+	; create a context for drawing onto the double buffer bitmap
+	invoke	CreateCompatibleDC, NULL
+	swap	esi, eax		; eax gets bitmap, esi gets new DC
+	invoke	SelectObject, esi, eax
+	push	eax			; save the old bitmap to remove bitmap
+	invoke	SetBkMode, esi, TRANSPARENT
+
+	; fill the entire rectangle with background gray
+	invoke	SelectObject, esi, hNullPen
+	invoke	SelectObject, esi, hGrayBrush
+	mov	eax, Xwidth
+	inc	eax
+	mov	ebx, Yheight
+	inc	ebx
+	invoke	Rectangle, esi, 0, 0, eax, ebx
+
+.IF (Active)	; now fleshout the bitmap ONLY IF we're active
+
+	; if RightText string is non-null, paint it in darker gray
+	mov	edi, pRightText
+	.IF (edi)
+		invoke	SelectObject, esi, hDialogTextFont
+		invoke	SetTextColor, esi, GRAY_COLOR
+		invoke	lstrlen, edi
+		lea	ebx, Extent
+		invoke	GetTextExtentPoint32, esi, edi, eax, ebx
+		invoke	lstrlen, edi
+		mov	ebx, Xwidth		; get the total width
+		sub	ebx, Extent._cx
+		halve	ebx
+		mov	ecx, Yheight
+		sub	ecx, Extent._cy
+		halve	ecx
+		invoke	TextOut, esi, ebx, ecx, edi, eax
+	.ENDIF
+
+	; now paint the active portion
+	invoke	CreateSolidBrush, BarColor
+	invoke	SelectObject, esi, eax
+	push	eax				; save prior brush
+	mov	eax, Xwidth
+	inc	eax
+	mul	BarValue	; edx will have the new width
+	add	eax, 80000000h	; now round it up!
+	adc	edx, 0
+	mov	AbsoluteBarWidth, edx
+	mov	eax, Yheight
+	inc	eax
+	invoke	Rectangle, esi, 0, 0, edx, eax
+	pop	eax				; recover prior brush
+	invoke	SelectObject, esi, eax		; recover newly created brush
+	invoke	DeleteObject, eax		; delete the brush
+
+	; now place the floating percentage into the middle (if it fits there)
+	invoke	SelectObject, esi, hTitleFont
+	invoke	SetTextColor, esi, WHITE_COLOR
+	mov	eax, 100	; calculate the percentage
+	mul	BarValue	; edx will have the new width
+	add	eax, 80000000h	; now round it up!
+	adc	edx, 0
+	invoke	wsprintf, ADDR PercentString, ADDR szBarChartPercent, edx
+	mov	edi, eax
+	lea	ebx, Extent
+	invoke	GetTextExtentPoint32, esi, ADDR PercentString, eax, ebx
+	mov	ebx, AbsoluteBarWidth	; get the active bar's width
+	sub	ebx, Extent._cx
+	sar	ebx, 1			; scale back but keep sign
+	.IF (sign?)
+		invoke	SelectObject, esi, hDialogTextFont
+		mov	ebx, AbsoluteBarWidth
+	.ENDIF
+	mov	ecx, Yheight
+	sub	ecx, Extent._cy
+	halve	ecx
+	invoke	TextOut, esi, ebx, ecx, ADDR PercentString, edi
+
+.ENDIF
+	; now blit the final result out to the screen
+	invoke	BitBlt, hDC, Xleft, Ytop, Xwidth, Yheight, esi, 0, 0, SRCCOPY
+
+	; and clean up after all the work
+	pop	eax				; recover prior bitmap
+	invoke	SelectObject, esi, eax		; recover newly created bitmap
+	invoke	DeleteObject, eax		; delete the bitmap
+	invoke	DeleteDC, esi			; delete created container DC
+Exit:	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintBarGraph	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          PAINT THE BAR GRAPHS			    ³
+;³    This paints the two or three bar graphs on the test monitor window.   ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintTheBarGraphs	PROC 	hDC:HDC, Active:BOOL
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	PaintBarGraph, hDC, 13,  57, 395, 14, BLUE_COLOR, PercentComplete, NULL, Active
+	.IF (JazDrive)
+		mov	ebx, Side_0_SparesCount
+		mov	ecx, MAXIMUM_JAZ_SPARES
+		.IF (ebx > ecx)			; if Spares >  MAXIMUM
+			mov	ebx, ecx	; clip Spares down to MAX
+		.ENDIF
+		call	CvrtIntoPrcnt
+		mov	ebx, eax
+		invoke	PaintBarGraph, hDC, 13,  95, 395, 30, RED_COLOR, ebx, NULL, Active
+	.ELSE
+		mov	ebx, Side_0_SparesCount
+		mov	ecx, MAXIMUM_ZIP_SPARES
+		call	CvrtIntoPrcnt
+		invoke	PaintBarGraph, hDC, 13,  95, 395, 14, RED_COLOR, eax, ADDR szSide0, Active
+		mov	ebx, Side_1_SparesCount
+		mov	ecx, MAXIMUM_ZIP_SPARES
+		call	CvrtIntoPrcnt
+		invoke	PaintBarGraph, hDC, 13, 111, 395, 14, RED_COLOR, eax, ADDR szSide1, Active
+	.ENDIF
+;--------------------------------------------------------------------------
+	ret
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CvrtIntoPrcnt:	zero	edx
+	   	zero	eax
+	   	dec	eax	; set edx:eax to [0:FFFFFFFF]
+	   	div	ecx	; divide by the maximum possible
+	   	neg	ebx
+	   	add	ebx, ecx
+	   	mul	ebx
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+		LocalReturn
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintTheBarGraphs	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          PAINT CENTERED STRING			    ³
+;³        Paints a Double-Buffered string into a rectangular region	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintCenteredString	PROC USES esi edi, hDC:HDC, Xleft:DWORD, Ytop:DWORD, Xwidth:DWORD, Yheight:DWORD, pText:DWORD, Active:BOOL
+			LOCAL	Extent:_SIZE
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	; create a temporary drawing bitmap for double-buffererd rendering
+	invoke	GetDC, hTestMonitor
+	mov	esi, eax		; hold the creation DC in esi
+	invoke	CreateCompatibleBitmap, esi, Xwidth, Yheight
+	swap	esi, eax		; eax gets DC, esi gets bitmap
+	invoke	ReleaseDC, hTestMonitor, eax
+
+	; create a context for drawing onto the double buffer bitmap
+	invoke	CreateCompatibleDC, NULL
+	swap	esi, eax		; eax gets bitmap, esi gets new DC
+	invoke	SelectObject, esi, eax
+	push	eax			; save the old bitmap to remove bitmap
+	invoke	SetBkMode, esi, TRANSPARENT
+
+	; fill the entire rectangle with background gray
+	invoke	SelectObject, esi, hNullPen
+	invoke	SelectObject, esi, hGrayBrush
+	mov	eax, Xwidth
+	inc	eax
+	mov	ebx, Yheight
+	inc	ebx
+	invoke	Rectangle, esi, 0, 0, eax, ebx
+
+.IF (Active)	; now fleshout the bitmap ONLY IF we're active
+
+	; now place the floating string into the middle
+	invoke	SelectObject, esi, hDialogTextFont
+	invoke	lstrlen, pText
+	mov	edi, eax
+	lea	ebx, Extent
+	invoke	GetTextExtentPoint32, esi, pText, eax, ebx
+	mov	ebx, Xwidth		; get the region's width
+	sub	ebx, Extent._cx
+	halve	ebx
+	mov	ecx, Yheight
+	sub	ecx, Extent._cy
+	halve	ecx
+	invoke	TextOut, esi, ebx, ecx, pText, edi
+
+.ENDIF
+	; now blit the final result out to the screen
+	invoke	BitBlt, hDC, Xleft, Ytop, Xwidth, Yheight, esi, 0, 0, SRCCOPY
+
+	; and clean up after all the work
+	pop	eax				; recover prior bitmap
+	invoke	SelectObject, esi, eax		; recover newly created bitmap
+	invoke	DeleteObject, eax		; delete the bitmap
+	invoke	DeleteDC, esi			; delete created container DC
+Exit:	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintCenteredString	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          PAINT CENTERED VALUE			    ³
+;³     Paints a Double-Buffered decimal value into a rectangular region	    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintCenteredValue	PROC USES esi edi, hDC:HDC, Xleft:DWORD, Ytop:DWORD, Xwidth:DWORD, Yheight:DWORD, value:DWORD, Active:BOOL
+			LOCAL	szString[40]:CHAR
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	; convert our value into a string
+	invoke	wsprintf, ADDR szString, ADDR szCenteredDecimal, value
+	; and paint it's value
+	invoke	PaintCenteredString, hDC, Xleft, Ytop, Xwidth, Yheight, ADDR szString, Active
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintCenteredValue	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          PAINT TEST STATISTICS			    ³
+;³            This paints the two columns of testing statistics		    ³
+;³                       on the test monitor window.			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PaintTestStatistics	PROC USES esi edi, hDC:HDC, Active:BOOL
+			LOCAL	szString[40]:CHAR
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	edi, hDC
+	; assemble and paint the sector testing range
+	mov	eax, SingleTransferLBA	; are we testing a single sector?
+	.IF (eax)
+		invoke	wsprintf, ADDR szString, ADDR szCenteredDecimal, eax
+	.ELSE
+		invoke	wsprintf, ADDR szString, ADDR szCenteredDecimal, FirstLBASector
+		invoke	lstrcat, ADDR szString, ADDR szSpaceDashSpace
+		invoke	lstrlen, ADDR szString
+		lea	esi, szString
+		add	esi, eax
+		invoke	wsprintf, esi, ADDR szCenteredDecimal, LastLBASector
+	.ENDIF
+	invoke	PaintCenteredString,  edi,  66, 155, 126, 14, ADDR szString, Active
+
+	; show the LastError
+	push	edi				; save our display context
+	mov	edi, OFFSET ErrorTypeTest	; point to the top of the list
+TryIt:	mov	eax, [edi]			; get a candidate error #
+	add	edi, 4
+	.IF (eax)				; if we haven't hit the end
+		cmp	eax, LastError
+		je	ShowIt
+		mov	al, 0
+		repne scasb
+		jmp	TryIt
+	.ELSE
+		.IF (LastError)
+			invoke	PostToScreen, LastError
+			mov	edi, OFFSET szUnknownError
+		.ENDIF
+	.ENDIF
+ShowIt:	mov	eax, edi
+	pop	edi
+	invoke	PaintCenteredString,  edi,  66, 172, 126, 14, eax, Active
+
+	; show the elapsed time
+	mov	eax, SecondsElapsed
+	call	CvrtSecondsToHMSstring
+	invoke	PaintCenteredString,  edi,  66, 189, 126, 14, ADDR szString, Active
+
+	; see if it's time for us to estimate ...
+	mov	edx, SecondsElapsed
+	mov	eax, edx
+	sub	eax, ElapsedTimeOfLastEstimate
+	.IF (eax > 15)
+		; assemble the remaining time
+		mov	ElapsedTimeOfLastEstimate, edx	; note this estimate time
+		zero	eax
+		mov	ebx, PercentComplete
+		.IF (ebx > edx)		; if it's safe to divide, show remaining time
+			roundiv	ebx	; eax will have estimated completion
+		.ENDIF
+		mov	CurrentTotalTimeEstimate, eax
+	.ELSE
+		mov	eax, CurrentTotalTimeEstimate
+	.ENDIF
+
+	; given the current estimate time, show the remaining time!
+	.IF (eax)
+		sub	eax, SecondsElapsed
+		.IF (carry?)		; if it went negative
+			zero	eax	; clamp it to zero
+		.ENDIF
+		call	CvrtSecondsToHMSstring
+	.ELSE
+		invoke	lstrcpy, ADDR szString, ADDR szEstimating
+	.ENDIF
+	.IF (TestingPhase <= READY_TO_TEST)
+		invoke	lstrcpy, ADDR szString, ADDR szOneMoment
+	.ENDIF
+	invoke	PaintCenteredString,  edi,  66, 206, 126, 14, ADDR szString, Active
+
+	; now show the error accumulations ...
+	mov	esi, ReadDataRecovery
+	invoke	PaintCenteredValue, edi, 347, 155,  61, 14, esi, Active
+	mov	eax, WriteDataRecovery
+	add	esi, eax
+	invoke	PaintCenteredValue, edi, 347, 172,  61, 14, eax, Active
+	mov	eax, UnrecoverableData
+	add	esi, eax
+	invoke	PaintCenteredValue, edi, 347, 189,  61, 14, eax, Active
+	invoke	PaintCenteredValue, edi, 347, 206,  61, 14, esi, Active
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	ret
+
+CvrtSecondsToHMSstring:
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	ebx, 60
+	zero	edx
+	div	ebx		; edx = seconds / eax = minutes
+	mov	ecx, edx	; ecx = seconds
+	zero	edx
+	div	ebx		; edx = minutes / eax = hours
+	invoke	wsprintf, ADDR szString, ADDR szHoursMinsSecs, eax, edx, ecx
+;--------------------------------------------------------------------------
+	LocalReturn
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PaintTestStatistics	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          TEST MONITOR WND PROC			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+TestMonitorWndProc	PROC USES esi edi, hWnd:HWND, msg:DWORD, wParam:WPARAM, lParam:LPARAM
+	 		LOCAL	ps:PAINTSTRUCT, Rect:RECT
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	eax, msg
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ WM_PAINT : Paint our entire test monitor window			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+.IF (eax == WM_PAINT)
+	invoke	BeginPaint, hWnd, ADDR ps	; setup our paintstruct
+	mov	edi, eax
+	;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	SelectObject, edi, hDialogTextFont
+	invoke	SetBkMode,    edi, TRANSPARENT
+	invoke	lstrlen, ADDR szCartStatus
+	invoke	TextOut, edi, 12, 9, ADDR szCartStatus, eax
+	invoke	DrawEdge, edi, ADDR CS_Stat, BDR_SUNKENOUTER, BF_RECT
+	invoke	PaintCartStatus, edi
+
+	; draw the sunken rectangles
+	invoke	DrawEdge, edi, ADDR TP_Perc, BDR_SUNKENOUTER, BF_RECT
+	invoke	SunkenFields, edi, ADDR TL_Sect, 4, 17
+	invoke	SunkenFields, edi, ADDR ES_Read, 4, 17
+	.IF (JazDrive)	; draw a single LARGE rectangle
+		invoke	DrawEdge, edi, ADDR SS_Jaz, BDR_SUNKENOUTER, BF_RECT
+	.ELSE		; draw a pair of smaller rectangles
+		invoke	SunkenFields, edi, ADDR SS_Sid0, 2, 16
+	.ENDIF
+
+	.IF (CartridgeStatus == DISK_AT_SPEED) || (CartridgeStatus >= DISK_LOW_SPARES)
+		invoke	PaintTheBarGraphs, edi, TRUE
+		invoke	PaintTestStatistics, edi, TRUE
+		mov	eax, BLACK_COLOR
+	.ELSE
+		invoke	PaintTheBarGraphs, edi, FALSE
+		invoke	PaintTestStatistics, edi, FALSE
+		mov	eax, GRAY_COLOR
+	.ENDIF
+	invoke	PaintTextArray, edi, ADDR TestBlackText, eax
+	invoke	PaintTextArray, edi, ADDR TestGrayText,  GRAY_COLOR
+
+	invoke	PaintTestPhase, edi
+	;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	EndPaint, hWnd, ADDR ps		; returns zero if we process
+.ELSE
+	invoke  DefWindowProc, hWnd, msg, wParam,lParam
+.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+TestMonitorWndProc	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                               DATA SOURCE				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+DataSource	PROC USES ebx ecx edx,	pDest:PTR SBYTE, pCount:PTR DWORD, pCompData:PTR COMP_DATA
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	ASSUME	ebx:PTR COMP_DATA
+;--------------------------------------------------------------------------
+	mov	ebx, pCompData
+	mov	eax, [ebx].EndOfBuffer	 ; get the end of the buffer
+	mov	edx, [ebx].SourcePointer ; get the current start
+	sub	eax, edx		 ; calc the remaining amount
+	mov	ecx, pCount		 ; get the pointer to the count
+	mov	ecx, [ecx]		 ; and get the actual count
+	.IF (eax > ecx)			 ; if it's more than we can take
+		mov	eax, ecx	 ; diminish it to the limit
+	.ENDIF
+	add	[ebx].SourcePointer, eax ; bump the offset forward for next
+	push	eax			 ; save the amount transferred
+	invoke	MoveMemory, pDest, edx, eax ; move the data
+	pop	eax			 ; recover the amount we moved
+	ret	; and return the Count that we placed into the buffer
+;--------------------------------------------------------------------------
+	ASSUME	ebx:NOTHING
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+DataSource	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                                DATA SINK				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+DataSink	PROC USES ebx ecx edx, pSource:PTR SBYTE, pCount:PTR DWORD, pCompData:PTR COMP_DATA
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	ASSUME	ebx:PTR COMP_DATA
+;--------------------------------------------------------------------------
+	mov	ebx, pCompData
+	mov	eax, pCount		; get the pointer to the count
+	mov	eax, [eax]		; and the count itself
+	mov	edx, [ebx].SinkPointer
+	add	[ebx].SinkPointer, eax
+	push	eax
+	invoke	MoveMemory, edx, pSource, eax
+	pop	eax
+	ret
+;--------------------------------------------------------------------------
+	ASSUME	ebx:NOTHING
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+DataSink	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            DECOMPRESS BINARY				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+DecompressBinary	PROC USES esi, pBitmapImage:LPVOID
+			LOCAL	pWorkingBuffer:LPSTR, CompData:COMP_DATA
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GlobalAlloc, GPTR, EXP_BUFFER_SIZE
+	mov	pWorkingBuffer, eax
+	mov	esi, pBitmapImage		; get the original size
+	mov	eax, [esi]			; eax has uncompressed size
+	push	eax				; save for function return
+	invoke	GlobalAlloc, GPTR, eax
+	push	eax				; save pointer to return
+	mov	CompData.SinkPointer, eax
+	add	esi, 8				; point to the data's start
+	mov	CompData.SourcePointer, esi	; set the starting point
+	add	esi, [esi-4]
+	mov	CompData.EndOfBuffer, esi
+	invoke	explode, ADDR DataSource, ADDR DataSink, pWorkingBuffer, ADDR CompData
+	invoke	GlobalFree, pWorkingBuffer
+	pop	eax	; return the saved decompressed pointer
+	pop	ebx	; return the original file size
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+DecompressBinary	ENDP
+
+
+GetRandomNumber:
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                  Simply returns a 32-bit random number		    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+	mov	eax, RandomSeed
+	imul	eax, RANDOMULT
+	inc	eax
+	mov	RandomSeed, eax
+	swap	ah, al
+	ror	eax, 8
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	ret
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                         APPLICATION TIMER PROC			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+ApplicationTimerProc	PROC	hWnd:HWND, Msg:UINT, id:UINT, time:DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	pushad	; save ALL the regs so we return things as we found them!
+	; see whether we need to animate the titlepage
+	.IF (CurrentPage == INTRO_PAGE)
+		call	FloatTheFloaters
+	.ENDIF
+
+	call	HandleDriveChanging
+
+	; to flash the ring around the "Start Testing" button
+	.IF (ActionButtonFlasher) && (CurrentPage >= FIRST_ACTION_PAGE) && (CurrentPage <= LAST_ACTION_PAGE)
+		invoke	GetDC, hMainWnd
+		mov	edi, eax
+		mov	eax, hBlackPen
+		.IF (ActionButtonFlasher & 1)
+			mov	eax, hGrayPen
+		.ENDIF
+		invoke	SelectObject, edi, eax
+		invoke	SelectObject, edi, hNullBrush
+		invoke	Rectangle, edi, TEST_BUTTON_LEFT-1, TEST_BUTTON_TOP-1, TEST_BUTTON_LEFT+TEST_BUTTON_WIDTH+1, TEST_BUTTON_TOP+TEST_BUTTON_HEIGHT+1
+		invoke	Rectangle, edi, TEST_BUTTON_LEFT-2, TEST_BUTTON_TOP-2, TEST_BUTTON_LEFT+TEST_BUTTON_WIDTH+2, TEST_BUTTON_TOP+TEST_BUTTON_HEIGHT+2
+		invoke	ReleaseDC, hMainWnd, edi
+		dec	ActionButtonFlasher
+	.ENDIF
+	popad
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ApplicationTimerProc	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                      INITIALIZE THE FLOATER SYSTEM			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+InitializeTheFloaterSystem	PROC USES esi edi
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	test	CPUis386, TRUE
+	iftrue	Exit
+	;--------------------------------------------------------------------------
+	zero	esi		; ESI will be the OBJECT INSTANCE index
+	.REPEAT			; EDI will be the OBJECT CLASS index
+		mov	edi, ObjectTypes[esi]
+		Call	InitPositionAndVelocity
+		call	GetValidObjectHorzPos
+		mov	HorzPosition[esi], eax
+		call	GetValidObjectVertPos
+		mov	VertPosition[esi], eax
+		add	esi, SIZEOF DWORD
+	.UNTIL (esi >= NUMBER_OF_FLOATERS * SIZEOF DWORD)
+	; place the objects into their initial positions
+	call	BlitTheObjects
+;--------------------------------------------------------------------------
+Exit:	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+InitializeTheFloaterSystem	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                        GET VALID OBJECT HORZ POS			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+GetValidObjectHorzPos	PROC USES ebx edx
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	call	GetRandomNumber		; returns EAX
+	mov	ebx, SPLASH_WIDTH
+	mov	ecx, xwidth[edi]
+	dec	ecx
+	add	ebx, ecx
+	mul	ebx
+	sub	edx, ecx
+	shl	edx, 16			; convert into 16ù16
+	mov	eax, edx
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetValidObjectHorzPos	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                        GET VALID OBJECT VERT POS			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+GetValidObjectVertPos	PROC USES ebx edx
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	call	GetRandomNumber		; returns EAX
+	mov	ebx, SPLASH_HEIGHT
+	mov	ecx, yheight[edi]
+	dec	ecx
+	add	ebx, ecx
+	mul	ebx
+	sub	edx, ecx
+	shl	edx, 16			; convert into 16ù16
+	mov	eax, edx
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetValidObjectVertPos	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            MIX EDX BY THREE				    ³
+;³ With 1/3rd probability, this negates EDX, leaves it alone, of zeroes it. ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+MixEDXbyThree	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	push	edx
+	call	GetRandomNumber		; eax
+	mov	edx, 3
+	mul	edx
+	mov	eax, edx
+	pop	edx
+	.IF (!eax)
+		zero	edx
+	.ELSEIF (eax == 1)
+		neg	edx
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+MixEDXbyThree	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                         PREP FOR FAST BLITTING			    ³
+;³   This BSWAPS every DWORD of the bitmap's data placing the first bitmap  ³
+;³   bits up at the high end of the DWORD and linearizing them all along.   ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PrepForFastBlitting	PROC USES esi edi, pBitmapFile:HGLOBAL
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	test	CPUis386, TRUE
+	iftrue	Exit
+	;--------------------------------------------------------------------------
+	mov	eax, pBitmapFile		   ; get the data block
+	mov	ecx, [eax].BITMAPFILEHEADER.bfSize ; pickup the file's size
+	mov	esi, [eax].BITMAPFILEHEADER.bfOffBits
+	sub	ecx, esi	; calc the total size to bswap
+	shr	ecx, 2		; divide by 4 for dwords
+	add	esi, eax	; cvrt offset into actual pointer
+	mov	edi, esi	; setup our source and destination
+	.REPEAT
+		lodsd
+		bswap	eax
+		stosd
+	.UNTILCXZ
+Exit:	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PrepForFastBlitting	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                       ALLOCATE SIXTEEN COLOR DIB			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+AllocateSixteenColorDib	PROC	Hwidth:DWORD, Vheight:DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	eax, Hwidth		; get the width
+	add	eax, 7			; round up to dword boundary
+	and	eax, 0FFFFFFF8h		; (8 pixels per dword)
+	mul	Vheight			; multiply by the number of lines
+	add	eax, 16*4 + SIZEOF BITMAPINFOHEADER
+	invoke	GlobalAlloc, GPTR, eax
+	ASSUME	EAX:PTR BITMAPINFOHEADER
+	mov	[eax].biSize, SIZEOF BITMAPINFOHEADER
+	movmov	[eax].biWidth, ebx, Hwidth
+	movmov	[eax].biHeight, ebx, Vheight
+	mov	[eax].biPlanes, 1
+	mov	[eax].biBitCount, 4
+	ASSUME	EAX:NOTHING
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+AllocateSixteenColorDib	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            SPLASH THE BITMAP				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SplashTheBitmap	PROC USES esi edi, hDC:HDC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	edi, hDC
+	invoke	SelectPalette, edi, hSplashPalette, FALSE
+	invoke	RealizePalette, edi
+	mov	eax, pSplashDIB
+	mov	ebx, eax		; point ebx to the bits
+	add	ebx, 16*4 + SIZEOF BITMAPINFOHEADER
+	zero	ecx
+	zero	edx
+	zero	esi
+	invoke	SetDIBitsToDevice, edi, 16, 18, [eax + BITMAPINFOHEADER.biWidth], [eax + BITMAPINFOHEADER.biHeight],0, 0, 0, [eax + BITMAPINFOHEADER.biHeight], ebx, eax, DIB_RGB_COLORS
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SplashTheBitmap	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                           FLOAT THE FLOATERS				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+FloatTheFloaters	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	zero	esi			; ESI is the OBJECT INSTANCE index
+	.REPEAT				; EDI is the OBJECT CLASS index
+		mov	edi, ObjectTypes[esi]
+;--------------------------------------------------------------------------
+DoHorz:		mov	eax, HorzPosition[esi]	; get the 16ù16 format
+		add	eax, HorzVelocity[esi]	; compute new location
+		mov	HorzPosition[esi], eax	; and save it, presuming okay
+		shr	eax, 16			; discard the fractional part
+		movsx	eax, ax
+		cmp	eax, SPLASH_WIDTH
+		jge	ReFloat
+		check	eax
+		jns	DoVert
+		neg	eax			; make the offset positive
+		cmp	eax, xwidth[edi]	; see if we're too negative
+		jge	ReFloat
+
+DoVert:		mov	eax, VertPosition[esi]	; get the 16ù16 format
+		add	eax, VertVelocity[esi]	; compute new location
+		mov	VertPosition[esi], eax	; and save it, presuming okay
+		shr	eax, 16
+		movsx	eax, ax
+		cmp	eax, SPLASH_HEIGHT
+		jge	ReFloat
+		check	eax
+		jns	NextObject
+		neg	eax			; make the offset positive
+		cmp	eax, yheight[edi]	; see if we're too negative
+		jl	NextObject
+
+ReFloat:	Call	InitPositionAndVelocity
+;--------------------------------------------------------------------------
+NextObject:	add	esi, SIZEOF DWORD
+	.UNTIL (esi >= NUMBER_OF_FLOATERS * SIZEOF DWORD)
+	; place the objects into their initial positions
+	call	BlitTheObjects
+	; and update the image in the window
+	mov	esi, hMainWnd
+	.IF (esi)			; make sure the window exists!
+		invoke	GetDC, esi
+		mov	edi, eax
+		invoke	SplashTheBitmap, eax
+		invoke	ReleaseDC, esi, edi
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+FloatTheFloaters	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                       INIT POSITION AND VELOCITY			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+InitPositionAndVelocity	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	; get a size-based vbelocity
+	mov	eax, VELOCITY_MULTIPLIER
+	mul	velocities[edi]
+;	mul	xwidth[edi]		; EDX has the size-based velocity
+	mov	edx, eax
+	; choose a border from which to emerge
+	call	GetRandomNumber		; returns EAX
+	mov	ebx, eax
+	.IF (ebx & 1)
+		call	GetValidObjectHorzPos
+		mov	HorzPosition[esi], eax
+		.IF (ebx & 2)		; TOP EDGE
+			mov	eax, yheight[edi]
+			dec	eax
+			shl	eax, 16
+			neg	eax
+		.ELSE			; BOTTOM EDGE
+			mov	eax, (SPLASH_HEIGHT-1) SHL 16
+			neg	edx
+		.ENDIF
+		mov	VertPosition[esi], eax
+		mov	VertVelocity[esi], edx
+		Call	MixEDXbyThree
+		mov	HorzVelocity[esi], edx
+	.ELSE
+		call	GetValidObjectVertPos
+		mov	VertPosition[esi], eax
+		.IF (ebx & 2)		; LEFT EDGE
+			mov	eax, xwidth[edi]
+			dec	eax
+			shl	eax, 16
+			neg	eax
+		.ELSE			; RIGHT EDGE
+			mov	eax, (SPLASH_WIDTH-1) SHL 16
+			neg	edx
+		.ENDIF
+		mov	HorzPosition[esi], eax
+		mov	HorzVelocity[esi], edx
+		Call	MixEDXbyThree
+		mov	VertVelocity[esi], edx
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+InitPositionAndVelocity	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                            BLIT THE OBJECTS				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+BlitTheObjects	PROC USES esi edi
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	; Zero the entire destination bitmap before summing into it ...
+	mov	eax, pSplashDIB
+	add	eax, SIZEOF BITMAPINFOHEADER + 16*4
+	invoke	ZeroMemory, eax, (SPLASH_HEIGHT * DEST_BITMAP_BYTE_WIDTH)
+
+	; Now BLIT the entire set of Objects into the bitmap
+	zero	esi
+	.REPEAT	; ESI will be the OBJECT INSTANCE index
+		; EDI will be the OBJECT CLASS index
+		mov	edi, ObjectTypes[esi]	; EDI is the pointer to the OBJECT CLASS
+
+		; establish the object's translucency transformation table
+		invoke	MoveMemory, ADDR xform, transform[edi], 16*4
+
+		; let's figure out the horizontal
+		mov	eax, HorzPosition[esi]	; get the current Horz
+		shr	eax, 16			; discard the fractional
+		movsx	eax, ax			; and sign-extend it
+		.IF (sdword ptr eax >= 0)
+			; our X coord is positive, so no left clipping
+			mov	ebx, SPLASH_WIDTH
+			sub	ebx, eax
+			mov	edx, xwidth[edi]
+			.IF (ebx > edx)
+				mov	ebx, edx
+			.ENDIF
+			mov	edx, eax
+			zero	eax
+		.ELSE
+			; we have a negative X, so some of our left is clipped
+			mov	ebx, xwidth[edi]
+			add	ebx, eax	; EBX has the pixel count
+			neg	eax		; EAX has the left SRC pixel
+			zero	edx		; EDX has the left DEST pixel
+		.ENDIF
+		.IF (ebx > SPLASH_WIDTH)	; trim our blit to window width
+			mov	ebx, SPLASH_WIDTH
+		.ENDIF
+		mov	PixelsPerLine, ebx
+
+		; EAX has the starting pixel in the SOURCE bitmap
+		add	eax, xleft[edi]		; add-in the source offset
+		mov	ecx, eax		; first setup the bit mask
+		and	cl, 1Fh			; get the lower FIVE bits
+		mov	ebx, 80000000h		; setup the source mask
+		shr	ebx, cl
+		mov	SourceBitStart, ebx
+
+		and	eax, 0FFFFFFE0h		; mask off the lower five bits
+		shr	eax, 3			; now the byte offset
+		add	eax, pFontBitmap
+		add	eax, ytop[edi]		; !!! This is pre-computed !!!
+		mov	SourceLineStart, eax
+
+		; EDX has the starting pixel in the DEST bitmap
+		mov	ecx, edx
+		and	ecx, 00000007h		; get 0-7
+		shl	ecx, 2			; * 4 == 0-28
+		neg	ecx
+		add	ecx, 28			; 28 .... 0
+		mov	DestBitStart, ecx	; (28 for the 0th bit!)
+
+		mov	eax, pSplashDIB
+		add	eax, SIZEOF BITMAPINFOHEADER + 16*4 + ((SPLASH_HEIGHT-1) * DEST_BITMAP_BYTE_WIDTH)
+		and	edx, 0FFFFFFF8h
+		shr	edx, 1			; get the byte offset
+		add	eax, edx
+		mov	DestLineStart, eax
+
+		; let's figure out the vertical
+		mov	eax, VertPosition[esi]	; get the current Horz
+		shr	eax, 16			; discard the fractional
+		movsx	eax, ax			; and sign-extend it
+		.IF (sdword ptr eax >= 0)
+			; our X coord is positive, so no top clipping
+			mov	ebx, eax
+			imul	ebx, DEST_BITMAP_BYTE_WIDTH
+			sub	DestLineStart, ebx
+			mov	ebx, SPLASH_HEIGHT
+			sub	ebx, eax
+			mov	edx, yheight[edi]
+			.IF (ebx > edx)
+				mov	ebx, edx
+			.ENDIF
+		.ELSE
+			; we have a negative Y, so some of our top is clipped
+			mov	ebx, yheight[edi]
+			add	ebx, eax	; EBX has the new line count
+			imul	eax, SOURCE_BITMAP_BYTE_WIDTH
+			add	SourceLineStart, eax
+		.ENDIF
+		mov	LineCount, ebx
+		call	FastTransparentBlt
+		add	esi, SIZEOF DWORD
+	.UNTIL (esi >= NUMBER_OF_FLOATERS * SIZEOF DWORD)
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+BlitTheObjects	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          FAST TRANSPARENT BLT			    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³ This performs an ULTRA FAST transparent BitBlt of one DIB into another.  ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³ EAX is the working scratch register					    ³
+;³ EBX contains the destination bitmap data for 8 pixels		    ³
+;³ ECX has the shift over count						    ³
+;³ EDX has the 4-bit pixel mask						    ³
+;³ EBP has the 1-bit pixel mask						    ³
+;³ ESI has the source bitmap dword pointer				    ³
+;³ EDI has the dest bitmap dword pointer				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+FastTransparentBlt	PROC USES esi edi ebp
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+LinePrep:movmov	PixelsToBlt, eax, PixelsPerLine
+	mov	esi, SourceLineStart
+	mov	edi, DestLineStart
+	mov	ebp, SourceBitStart
+	mov	ecx, DestBitStart
+	mov	edx, FourBitMasks[ecx]
+	mov	ebx, [edi]		; get a dword set of bitmaps from the dest
+	bswap	ebx			; de-scramble the nibbles!
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+TstPixel:.IF ([esi] & ebp)		; see if this source-bit is set
+		mov	eax, ebx	; get the destination bitmap dword
+		and	eax, edx	; mask out the 4-bit pixel we want
+		not	edx		; invert the mask to zero the dest pixel
+		and	ebx, edx	; zero the dest for eventual or-ing
+		not	edx		; return the mask to it's positive state
+		shr	eax, cl		; bring the pixel down to bit 0
+		mov	eax, xform[eax*4] ; perform the transparent transformation
+		shl	eax, cl		; move the new pixel back up where it goes
+		or	ebx, eax	; and OR it back into the DIB
+	.ENDIF
+	rcr	ebp, 1			; setup for the next source pixel
+	.IF (carry?)			; if we're done, get the next word
+		rcr	ebp, 1		; set the low-order bit
+		add	esi, 4		; bump to the next source dword
+	.ENDIF
+	ror	edx, 4			; move the mask around four bits
+	sub	ecx, 4			; decrease the shift-over amount by 4
+	.IF (carry?)			; if we're done with this pixel
+		bswap	ebx		; re-scramble the nibbles
+		mov	[edi], ebx	; replace the modified dest bitmap dword
+		add	edi, 4		; bump up to the next dest dword
+		mov	ebx, [edi]	; get the next dest bitmap dword
+		bswap	ebx		; de-scramble the nibbles
+		mov	ecx, 28		; and reset the shift-over amount
+	.ENDIF
+	dec	PixelsToBlt
+	jnz	TstPixel
+	;--------------------------------------------------------------------------
+	bswap	ebx			; re-scramble the nibbles
+	mov	[edi], ebx		; replace the modified dest bitmap dword
+	;--------------------------------------------------------------------------
+	sub	SourceLineStart, SOURCE_BITMAP_BYTE_WIDTH
+	sub	DestLineStart, DEST_BITMAP_BYTE_WIDTH
+	dec	LineCount		; see if we're all done or not
+	jnz	LinePrep
+	;--------------------------------------------------------------------------
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+FastTransparentBlt	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                           SET RICH EDIT TEXT				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SetRichEditText	PROC USES esi edi, phRichEditControl:LPHWND, pszSection:LPSTR
+		LOCAL	HeaderLength:DWORD, BodyStart:DWORD, BodyLength:DWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	; see whether we've already set THIS text into THIS control ...
+	mov	eax, pszSection		; get the section we're setting
+	mov	ebx, phRichEditControl	; and address of the control's handle
+	cmp	eax, [ebx+4]		; see if we've already set it
+	je	Exit			; YEP!  so we're all done!
+	;--------------------------------------------------------------------------
+	mov	[ebx+4], eax		; nope, so show it set now!
+
+	; now check to see if we're pointing to a NULL string ??
+	.IF (!byte ptr [eax])
+		mov	esi, eax	; setup the stream to NULL		
+		mov	edi, 1		; set the length to 1
+		jmp	SetIt
+	.ENDIF
+
+	; now search to the first '[' to size the first (header) section
+	mov	al, '['			; search for the first '[' bracket
+	mov	edi, pRTF_Data
+	mov	ecx, pRTF_Data+4
+	repne scasb			; and scan past the rtf header
+	mov	eax, edi
+	sub	eax, pRTF_Data
+	dec	eax
+	mov	HeaderLength, eax	; establish the header's length
+
+	; now scan down to the opening of the proper section
+	mov	edi, pRTF_Data		; restart at the top of the file
+	mov	ecx, pRTF_Data+4
+NextOne:.REPEAT
+		mov	al, '['		; we're looking for a new section
+		repne scasb		; look for the next '['
+		jne	Exit		; if we didn't find one ... abort
+		mov	esi, ecx	; save our counter around the call
+		invoke	lstrcmp, edi, pszSection
+		mov	ecx, esi	; restore our counter after the call
+	.UNTIL (!eax)			; keep looking 'till we find it
+
+	; now find the start of the NEXT line after the section header
+	mov	al, LF			; look for line feeds
+	repne scasb			; scan for next line start
+	jne	Exit			; abort if we didn't have one!
+	mov	BodyStart, edi		; mark the start of the body text
+
+	; now find the start of the NEXT section (and the end of this one)
+	mov	al, '['			; we're looking for a new section
+	repne scasb			; look for the next '['
+	jne	Exit			; if we didn't find one ... abort
+
+	; now scan BACK to the end of the PRIOR line
+	mov	al, LF			; scan backward past line start
+	mov	ecx, -1			; set the scan lenght to infinity
+	std				; set direction to backwards
+	repne scasb			; and land on the CR above
+	cld				; restore standard forward direction
+	sub	edi, BodyStart		; compute the Body's length
+	mov	BodyLength, edi
+	add	edi, HeaderLength	; get the total allocation needed
+	inc	edi			; and add ONE more byte for '}'
+
+	; allocate a block of mem for stream assembly
+	invoke	GlobalAlloc, GPTR, edi
+	mov	esi, eax		; esi will be our stream pointer
+
+	; fill the allocation with the header and the section's body
+	invoke	MoveMemory, esi, pRTF_Data, HeaderLength
+	mov	eax, esi
+	add	eax, HeaderLength
+	invoke	MoveMemory, eax, BodyStart, BodyLength
+	mov	eax, esi
+	add	eax, HeaderLength
+	add	eax, BodyLength
+	invoke	MoveMemory, eax, ADDR CloseCurly, 1
+
+	; setup the stream parameters and initiate the stream
+SetIt:	mov	StreamPointer, esi	; setup the start of the stream
+	add	edi, esi		; add the length to the start
+	mov	StreamEnd, edi		; and set the stream's end point
+	mov	eax, phRichEditControl
+	invoke	SendMessage, dword ptr [eax], EM_STREAMIN, SF_RTF or SFF_PLAINRTF, ADDR RichEditStreamIn
+
+	; release the temporary stream assembly allocation
+	.IF (byte ptr [esi])		; if we were not pointing to a NULL
+		invoke	GlobalFree, esi
+	.ENDIF
+Exit:	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetRichEditText	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                       INITIALIZE WIZARD CONTROLS			    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³       This presets and preloads the Wizard's Child Controls		    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+InitializeWizardControls	PROC
+				LOCAL	TabItem:TC_ITEM
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	; prep the RichEdit controls background colors ...
+	invoke	SendMessage, hRichEdit, EM_SETBKGNDCOLOR, FALSE, LTGRAY_COLOR
+	invoke	SendMessage, hTabText, EM_SETBKGNDCOLOR, FALSE, LTGRAY_COLOR
+
+	; set the static text for the main RichEdit control
+	invoke	SetRichEditText, ADDR hRichEdit, ADDR szInstructions
+
+	; setup the tabs for the ACTION page
+	invoke	InitCommonControls	; initialize the common controls
+
+	; loadup the tab text
+	varzero	TabItem
+	mov	TabItem._mask, TCIF_TEXT
+	mov	TabItem.iImage, -1
+	mov	TabItem.pszText, OFFSET szActionTabOne
+	invoke	SendMessage, hActionTabs, TCM_INSERTITEM, 0, ADDR TabItem
+	mov	TabItem.pszText, OFFSET szActionTabTwo
+	invoke	SendMessage, hActionTabs, TCM_INSERTITEM, 1, ADDR TabItem
+	; set the tab width
+	invoke	SendMessage, hActionTabs, TCM_SETITEMSIZE, 0, 143
+	; set the tab font
+	invoke	SendMessage, hActionTabs, WM_SETFONT, hDialogTextFont, NULL
+
+
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+InitializeWizardControls	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                              STREAM SOURCE				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+StreamSource	PROC	dwCookie:DWORD, pBuff:LPBYTE, cb:DWORD, pcb:LPDWORD
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	eax, StreamEnd		; get the end of the buffer
+	mov	edx, StreamPointer	; get the current start
+	sub	eax, edx		; calc the remaining amount
+	mov	ecx, cb			; get the count to read
+	.IF (eax > ecx)			; if it's more than we have left
+		mov	eax, ecx	 ; diminish it to the limit
+	.ENDIF
+	add	StreamPointer, eax	; bump the offset forward for next
+	push	eax			; save the amount transferred
+	invoke	MoveMemory, pBuff, edx, eax ; move the data
+	mov	eax, pcb
+	pop	dword ptr [eax]
+	zero	eax			; return zero to continue streaming
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+StreamSource	ENDP
+
+IF DEVELOPMENT
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                             POST TO SCREEN				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PostToScreen	PROC USES eax esi edi, PostVal:DWORD
+		LOCAL	PostString[20]:CHAR, Extent:_SIZE
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	mov	eax, PostVal
+	.IF (eax != LastPostedValue)
+		mov	LastPostedValue, eax
+		invoke	GetDC, HWND_DESKTOP
+		mov	edi, eax
+		invoke	SelectObject, edi, hHeadlineFont
+		invoke	SelectObject, edi, hBlackPen
+		invoke	SelectObject, edi, hBlackBrush
+		invoke	wsprintf, ADDR PostString, ADDR szLongHexFormat, LastPostedValue
+		mov	esi, eax
+		invoke	TextOut, edi, 0, LastPostedTop, ADDR PostString, eax
+		invoke	GetTextExtentPoint32, edi, ADDR PostString, esi, ADDR Extent
+		mov	esi, Extent._cy
+		add	esi, POSTING_SPACE
+		add	LastPostedTop, esi
+		mov	eax, Extent._cx
+		mov	ebx, Extent._cy
+		add	ebx, LastPostedTop
+		invoke	Rectangle, edi, 0, LastPostedTop, eax, ebx
+		invoke	ReleaseDC, HWND_DESKTOP, edi
+	.ENDIF
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PostToScreen	ENDP
+ENDIF
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                        PROCESS PENDING MESSAGES			    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³   This allows all windows to receive and process any and all pending	    ³
+;³   messages ... such as old WM_PAINT's that they may be holding ...	    ³
+;³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+;³   Note also that this loop DELIBERATELY AVOIDS the removal of WM_QUIT    ³
+;³   messages, since they should only be removed by the GetMessage call	    ³
+;³   which returns FALSE when it encounters the WM_QUIT			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+ProcessPendingMessages	PROC USES esi
+			LOCAL	msg:MSG
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	push	esi
+	.REPEAT
+		invoke	PeekMessage, ADDR msg, NULL, 0, 0, PM_REMOVE
+		.IF (eax)
+			mov	esi, eax
+			invoke  TranslateMessage, ADDR msg
+			invoke  DispatchMessage,  ADDR msg
+			mov	eax, esi
+		.ENDIF
+	.UNTIL (!eax)
+	pop	esi
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ProcessPendingMessages	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                         UPDATE RUN TIME DISPLAY			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+UpdateRunTimeDisplay	PROC USES edi
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetDC, hTestMonitor
+	mov	edi, eax
+	invoke	PaintTestPhase, edi
+	invoke	PaintTheBarGraphs, edi, TRUE
+	invoke	PaintTestStatistics, edi, TRUE
+	invoke	ReleaseDC, hTestMonitor, edi
+	call	ProcessPendingMessages		; paint all current status
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+UpdateRunTimeDisplay	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                         UPDATE RUN TIME DISPLAY			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+UpdateRunPhaseDisplay	PROC USES edi
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetDC, hTestMonitor
+	mov	edi, eax
+	invoke	PaintTestPhase, edi
+	invoke	ReleaseDC, hTestMonitor, edi
+	call	ProcessPendingMessages		; paint all current status
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+UpdateRunPhaseDisplay	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                          PREVENT PROGRAM EXIT			    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+PreventProgramExit	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetSystemMenu, hMainWnd, FALSE ; get sysmenu handle
+	invoke	DeleteMenu, eax, SC_CLOSE, MF_BYCOMMAND
+	invoke	SendMessage, hMainWnd, WM_NCPAINT, NULL, NULL
+	invoke	SetWindowPos, hMainWnd, 0, 0,0,0,0,
+		SWP_DRAWFRAME or SWP_NOMOVE or SWP_NOSIZE or SWP_NOZORDER
+	invoke	EnableWindow, hExitButton, FALSE
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PreventProgramExit	ENDP
+
+
+;ÕÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¸
+;³                           ALLOW PROGRAM EXIT				    ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+AllowProgramExit	PROC
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+	invoke	GetSystemMenu, hMainWnd, FALSE ; get sysmenu handle
+	invoke	AppendMenu, eax, MF_STRING, SC_CLOSE, ADDR szCloseCmd
+	invoke	SendMessage, hMainWnd, WM_NCPAINT, NULL, NULL
+	invoke	SetWindowPos, hMainWnd, 0, 0,0,0,0,
+		SWP_DRAWFRAME or SWP_NOMOVE or SWP_NOSIZE or SWP_NOZORDER
+	invoke	EnableWindow, hExitButton, TRUE
+	ret
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+AllowProgramExit	ENDP
+
+
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+include aspi.asm
+;-//////////////////////////////////////////////////////////////////////////-
+END	Start
+;-//////////////////////////////////////////////////////////////////////////-
+

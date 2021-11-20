@@ -1,0 +1,139 @@
+#define	APPNAME		TIP
+/////////////////////////////////////////////////////////////////////////////
+#define	IDB_BACK		0xFF00
+#define	IDB_NEXT		0xFF01
+#define	IDB_QUIT		0xFF02
+#define	IDB_COPY		0xFF03
+#define	VK_PRIOR		0x0021
+#define	VK_NEXT		0x0022
+#define	VK_END		0x0023
+#define	VK_HOME		0x0024
+#define	VK_LEFT		0x0025
+#define	VK_UP			0x0026
+#define	VK_RIGHT		0x0027
+#define	VK_DOWN		0x0028
+
+#define	IDB_LINEUP	0x8000
+#define	IDB_LINEDN	0x8001
+#define	IDB_PAGEUP	0x8002
+#define	IDB_PAGEDN	0x8003
+#define	IDB_END		0x8004
+#define	IDB_HOME		0x8005
+
+#define	DS_MODALFRAME	0x000000080
+
+#define	WS_POPUP			0x080000000
+#define	WS_VISIBLE		0x010000000
+#define	WS_CAPTION		0x000c00000
+#define	WS_TABSTOP		0x000010000
+
+#define	ES_PASSWORD		0x000000020
+#define	ES_AUTOHSCROLL	0x000000080
+
+#define	IDOK				1
+#define	IDCANCEL			2
+#define	IDC_PASSWORD	3
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+APPNAME		ICON		"tip.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Cursor
+//
+APPNAME		CURSOR	"tip.cur"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmaps
+//
+REDBITMAP		BITMAP	"red.bmp"
+GRNBITMAP		BITMAP	"green.bmp"
+OFFBITMAP		BITMAP	"off.bmp"
+SOUND				BITMAP	"sound.bmp"
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// Cartridge Password Dialog
+//
+
+APPNAME	DIALOG DISCARDABLE  57, 42, 187, 86
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "Please Enter Cartridge's Password"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_PASSWORD,12,41,162,12,WS_TABSTOP | ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,32,66,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,104,66,50,14
+    LTEXT           "This cartridge has been protected by a password.  You must enter the cartridge's password, then press OK, before this cartridge can be used . . .",
+                    0,12,8,162,27
+END
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+APPNAME ACCELERATORS MOVEABLE PURE 
+BEGIN
+    "b",            IDB_BACK,               ASCII,  ALT, NOINVERT
+    "B",            IDB_BACK,               ASCII,  ALT, NOINVERT
+    "b",            IDB_BACK,               ASCII,  NOINVERT
+    "B",            IDB_BACK,               ASCII,  NOINVERT
+    "<",            IDB_BACK,               ASCII,  NOINVERT
+    ",",            IDB_BACK,               ASCII,  NOINVERT
+    VK_LEFT,        IDB_BACK,               VIRTKEY, NOINVERT
+
+    "c",            IDB_COPY,               ASCII,  NOINVERT
+    "C",            IDB_COPY,               ASCII,  NOINVERT
+
+    "n",            IDB_NEXT,               ASCII,  ALT, NOINVERT
+    "N",            IDB_NEXT,               ASCII,  ALT, NOINVERT
+    "n",            IDB_NEXT,               ASCII,  NOINVERT
+    "N",            IDB_NEXT,               ASCII,  NOINVERT
+	 ">",            IDB_NEXT,               ASCII,  NOINVERT
+	 ".",            IDB_NEXT,               ASCII,  NOINVERT
+    VK_RIGHT,       IDB_NEXT,               VIRTKEY, NOINVERT
+
+    "x",            IDB_QUIT,               ASCII,  ALT, NOINVERT
+    "X",            IDB_QUIT,               ASCII,  ALT, NOINVERT
+    "x",            IDB_QUIT,               ASCII,  NOINVERT
+    "X",            IDB_QUIT,               ASCII,  NOINVERT
+
+    VK_UP,          IDB_LINEUP,           VIRTKEY, NOINVERT
+    VK_DOWN,        IDB_LINEDN,           VIRTKEY, NOINVERT
+    VK_PRIOR,       IDB_PAGEUP,	         VIRTKEY, NOINVERT
+    VK_NEXT,        IDB_PAGEDN,	         VIRTKEY, NOINVERT
+    VK_END,         IDB_END,              VIRTKEY, NOINVERT
+    VK_HOME,        IDB_HOME,             VIRTKEY, NOINVERT
+END
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+1 VERSIONINFO
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904b0"
+		BEGIN
+			VALUE "A Web Site for Updates", "http://grc.com\0"
+			VALUE	"CompanyName", "Gibson Research Corp.\0"
+			VALUE "FileDescription", "Iomega Drive/Media Tester\0"
+			VALUE "FileVersion", "2.1b\0"
+			VALUE "InternalName", "tip.exe\0"
+			VALUE "LegalCopyright", "Copyright \251 2003 Gibson Research Corp.\0"
+			VALUE "OriginalFilename", "tip.exe\0"
+			VALUE "ProductName", "TIP (Trouble In Paradise) by Steve Gibson\0"
+			VALUE "ProductVersion", "2.1b\0"
+		END
+	END
+	BLOCK "VarFileInfo"
+	BEGIN
+   	VALUE "Translation", 0x409, 1200
+	END
+END
+
