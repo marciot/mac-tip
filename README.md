@@ -27,11 +27,43 @@ Right now the port is in early testing, so I am not releasing any
 compiled binaries. There is always a risk of data loss with a tool like
 this, so please contact me directly if you want to beta test.
 
+Command console
+---------------
+
+When you first start the program, you will be greeted with a Command
+Console. This is a unique feature of this port and is not present in
+the original TIP:
+
+![Command Line][mac-screenshot2]
+
+**Before launching TIP, you will need to do some prep work. It is *vitally
+important* that you unmount the Zip cartridge prior to running TIP on it.**
+
+Unmounting is different than ejecting a cartridge. Once a Zip cartridge is
+unmounted, the icon will disappear from the Finder, but the cartridge will
+remain in the drive.
+
+There is no way to unmount a cartridge without ejecting it in the Finder,
+but you may do it via the Command Console like this:
+
+* Type `volumes` to show a numbered list of all Mac volumes
+* Type `unmount` followed by a volume's number to unmount it.
+
+Once you have the Zip cartridge unmounted, you will need to tell TIP which
+SCSI device to use.
+
+* Type `list` to show a numbered list of all SCSI devices by SCSI ID.
+* Type `tip` followed by a SCSI ID to run TIP on that device.
+
+At the present, I am unable to find any documented MacOS APIs for
+automatically unmounting volumes associated with a SCSI ID. Future versions
+may simplify the process if I find out how to do this.
+
 Got projects?
 -------------
 
 If you have consulting work, particular contract work pertaining
-to vintage computers or THREE.js, please hit me via my [GitHub account]!
+to vintage computers or THREE.js, please hit me up via my [GitHub account]!
 
 About the code
 --------------
@@ -64,6 +96,7 @@ his code in this repository with his permission.
 
 [GitHub account]: https://github.com/marciot
 [mac-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip1.png "TIP"
+[mac-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/mac-cmd.png "Command Line"
 [win-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/win-tip1.gif "TIP"
 [win-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/win-tip2.gif "TIP"
 [Gibson Research Corp]: https://www.grc.com
