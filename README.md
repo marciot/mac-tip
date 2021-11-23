@@ -7,6 +7,32 @@ This is the repository for a Macintosh port of [Gibson Research Corp]'s
 [Trouble in Paradise], a diagnostic and repair tool for Iomega Zip and
 Jaz Drives.
 
+This tool is meant for Macintosh computers with a SCSI port, which
+range from the Macintosh Plus, released in 1986, through the "Beige"
+Power Macintosh G3, released in 1997.
+
+If you have consulting work, particular contract work pertaining
+to vintage computers, please hit me via my GitHub account!
+
+Disclaimer
+----------
+
+**This software is provided on as "as is" basis and the user assumes
+all risk of data loss. Although this software bears a similarity to
+the original by GRC, I may have introduced errors during the conversion
+process. Please do not reach out to GRC for support on this Macintosh
+port.**
+
+Where are the binaries?
+-----------------------
+
+Right now the port is in early testing, so I am not releasing any
+compiled binaries. There is always a risk of data loss with a tool like
+this, so please contact me directly if you want to beta test.
+
+About the code
+--------------
+
 Portions of the original code have been re-written in C++ and adapted
 for compilation using [Metrowerks CodeWarrior 8 Gold]. Native
 [Macintosh SCSI Manager] routines have been substituted for the Win32
