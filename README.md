@@ -11,9 +11,6 @@ This tool is meant for Macintosh computers with a SCSI port, which
 range from the Macintosh Plus, released in 1986, through the "Beige"
 Power Macintosh G3, released in 1997.
 
-If you have consulting work, particular contract work pertaining
-to vintage computers, please hit me via my GitHub account!
-
 Disclaimer
 ----------
 
@@ -29,6 +26,12 @@ Where are the binaries?
 Right now the port is in early testing, so I am not releasing any
 compiled binaries. There is always a risk of data loss with a tool like
 this, so please contact me directly if you want to beta test.
+
+Got projects?
+-------------
+
+If you have consulting work, particular contract work pertaining
+to vintage computers or THREE.js, please hit me via my [GitHub account]!
 
 About the code
 --------------
@@ -59,6 +62,7 @@ his code in this repository with his permission.
 
 </details>
 
+[GitHub account]: https://github.com/marciot
 [mac-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip1.png "TIP"
 [win-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/win-tip1.gif "TIP"
 [win-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/win-tip2.gif "TIP"
