@@ -8,7 +8,7 @@
 
 #include "tip.h"
 
-// ----------------------- Test Monitor Panel Definitions	-------------------
+// ----------------------- Test Monitor Panel Definitions   -------------------
 #define SET_RECT(LEFT, TOP, RIGHT, BOTTOM) {TOP, LEFT, BOTTOM, RIGHT}
 
 Rect CS_Stat = SET_RECT(114,  8,  242,  28);
@@ -25,72 +25,72 @@ Rect SE_Rect = SET_RECT(222, 154, 255, 221);
  * This is the system's main window procedure
  */
 void WndProc(long iMessage, long wParam) {
-	// -------------------------------------------------------------------------
-	// WM_PAINT
-	// -------------------------------------------------------------------------
-	if (iMessage == WM_PAINT) {
-    	// Draw the Lower Horz Button Divider
+    // -------------------------------------------------------------------------
+    // WM_PAINT
+    // -------------------------------------------------------------------------
+    if (iMessage == WM_PAINT) {
+        // Draw the Lower Horz Button Divider
 
-    	SetColor(GRAY_COLOR);
-    	MoveTo(15, 289);
-    	LineTo(446, 289);
-    	SetColor(WHITE_COLOR);
-    	LineTo(446, 290);
-    	LineTo(14, 290);
+        SetColor(GRAY_COLOR);
+        MoveTo(15, 289);
+        LineTo(446, 289);
+        SetColor(WHITE_COLOR);
+        LineTo(446, 290);
+        LineTo(14, 290);
 
-    	// Paint the Copyright Notice
-    	SetColor(GRAY_COLOR);
-    	TextOut(15, 298, szCopyright_1);
-    	TextOut(15, 311, szCopyright_2);
+        // Paint the Copyright Notice
+        SetColor(GRAY_COLOR);
+        TextOut(15, 298, szCopyright_1);
+        TextOut(15, 311, szCopyright_2);
     }
-	// -------------------------------------------------------------------------
-	// WM_COMMAND : a button was pressed
-	// -------------------------------------------------------------------------
-	else if (iMessage == WM_COMMAND) {
-		switch(wParam) {
-			case IDB_QUIT:
-				if (TestingPhase < TESTING_STARTUP) {
-					PostQuitMessage();
-				}
-				break;
-			case IDB_TEST:
-    			switch(CartridgeStatus) {
-        			case DISK_SPUN_DOWN:
-            			SpinUpIomegaCartridge(CurrentDevice);
-            			break;
-        			case DISK_AT_SPEED:
-        				printf("Testing the disk\n");
-            			if(TestingPhase != READY_TO_TEST) {
-                			PrepareToBeginTesting();
-            			}
-            			TestTheDisk();
-            			printf("Test finished\n");
-            			break;
-        			case DISK_TEST_UNDERWAY:
-            			UserInterrupt = 1;
-            			break;
-        			case DISK_Z_TRACK_FAILURE:
-        			case DISK_TEST_FAILURE:
-        			case DISK_PROTECTED:
-            			//EjectIomegaCartridge();
-            			break;
-        			case DISK_LOW_SPARES:
-            			PrepareToBeginTesting();
-            			break;
-            	}
-            	break;
+    // -------------------------------------------------------------------------
+    // WM_COMMAND : a button was pressed
+    // -------------------------------------------------------------------------
+    else if (iMessage == WM_COMMAND) {
+        switch(wParam) {
+            case IDB_QUIT:
+                if (TestingPhase < TESTING_STARTUP) {
+                    PostQuitMessage();
+                }
+                break;
+            case IDB_TEST:
+                switch(CartridgeStatus) {
+                    case DISK_SPUN_DOWN:
+                        SpinUpIomegaCartridge(CurrentDevice);
+                        break;
+                    case DISK_AT_SPEED:
+                        printf("Testing the disk\n");
+                        if(TestingPhase != READY_TO_TEST) {
+                            PrepareToBeginTesting();
+                        }
+                        TestTheDisk();
+                        printf("Test finished\n");
+                        break;
+                    case DISK_TEST_UNDERWAY:
+                        UserInterrupt = 1;
+                        break;
+                    case DISK_Z_TRACK_FAILURE:
+                    case DISK_TEST_FAILURE:
+                    case DISK_PROTECTED:
+                        //EjectIomegaCartridge();
+                        break;
+                    case DISK_LOW_SPARES:
+                        PrepareToBeginTesting();
+                        break;
+                }
+                break;
             default:
-            	break;
-    	}
-	}
+                break;
+        }
+    }
 }
 
 BtnList tipBtns[] = {
-	{IDB_TEST, szPressToStart, 200, 301, 160, 24, true}, // Added by MLT
-	{IDB_BACK, szBack, 185-28, 301, 80, 24, false},
-	{IDB_NEXT, szNext, 264-28, 301, 80, 24, false},
-	{IDB_QUIT, szQuit, 367+35, 301, 45, 24, true},
-	{0, 0, 0, 0, 0, 0, 0}
+    {IDB_TEST, szPressToStart, 200, 301, 160, 24, true}, // Added by MLT
+    {IDB_BACK, szBack, 185-28, 301, 80, 24, false},
+    {IDB_NEXT, szNext, 264-28, 301, 80, 24, false},
+    {IDB_QUIT, szQuit, 367+35, 301, 45, 24, true},
+    {0, 0, 0, 0, 0, 0, 0}
 };
 
 /*******************************************************************************
@@ -155,7 +155,7 @@ void PaintCartStatus() {
  * PAINT BAR GRAPH
  *******************************************************************************/
 void PaintBarGraph(int Xleft, int Ytop, int XWidth, int YHeight, long BarColor, long BarValue, char *pRightText, bool Active) {
-    // fill	the entire rectangle with background gray
+    // fill the entire rectangle with background gray
     SetColor(BACK_COLOR);
     Rectangle(Xleft, Ytop, Xleft + XWidth, Ytop + YHeight);
     if (Active) { // now fleshout the bar ONLY IF we're active
@@ -170,11 +170,11 @@ void PaintBarGraph(int Xleft, int Ytop, int XWidth, int YHeight, long BarColor, 
         Rectangle(Xleft, Ytop, Xleft + AbsoluteBarWidth, Ytop + YHeight);
         // now place the floating percentage into the middle (if it fits there)
         if(BarValue) {
-        	char PercentString[8];
-        	sprintf(PercentString, szBarChartPercent, BarValue);
-        	SetColor(WHITE_COLOR);
-        	TextOutCentered(Xleft, Ytop, AbsoluteBarWidth, YHeight, PercentString);
-        	
+            char PercentString[8];
+            sprintf(PercentString, szBarChartPercent, BarValue);
+            SetColor(WHITE_COLOR);
+            TextOutCentered(Xleft, Ytop, AbsoluteBarWidth, YHeight, PercentString);
+
         }
     }
 }
@@ -193,15 +193,19 @@ void PaintTheBarGraphs(bool Active) {
         if(ebx > ecx) { // if Spares > MAXIMUM
             ebx = ecx; // clip Spares down to MAX
         }
-        PaintBarGraph(13, 95, 395, 30, RED_COLOR, ebx*100/ecx, NULL, Active);
+        PaintBarGraph(13, 95, 395, 30, RED_COLOR, CvrtIntoPrcnt(ebx, ecx), NULL, Active);
     } else {
         ebx = Side_0_SparesCount;
         ecx = MAXIMUM_ZIP_SPARES;
-        PaintBarGraph(13,  95, 395, 14, RED_COLOR, ebx*100/ecx, "Side 0", Active);
+        PaintBarGraph(13,  95, 395, 14, RED_COLOR, CvrtIntoPrcnt(ebx, ecx), "Side 0", Active);
         ebx = Side_1_SparesCount;
         ecx = MAXIMUM_ZIP_SPARES;
-        PaintBarGraph(13, 111, 395, 14, RED_COLOR, ebx*100/ecx, "Side 1", Active);
+        PaintBarGraph(13, 111, 395, 14, RED_COLOR, CvrtIntoPrcnt(ebx, ecx), "Side 1", Active);
     }
+}
+
+int CvrtIntoPrcnt(long val, long max) {
+    return 100 - val*100/max;
 }
 
 /*******************************************************************************
@@ -251,7 +255,7 @@ void PaintTestStatistics(bool Active) {
         }
         sprintf(szString, szCenteredDecimal, eax);
         strcat(szString, szSpaceDashSpace);
-        eax = FirstLBASector + NumberOfLBAs;
+        eax = FirstLBASector + NumberOfLBAs - 1;
         if (TestingPhase == READY_TO_TEST) {
             eax = LastLBAOnCartridge;
         }
@@ -262,8 +266,8 @@ void PaintTestStatistics(bool Active) {
     // show the LastError
     char *errStr = 0;
     for (int i = 0; errorTypeList[i].str; i++) {
-    	errStr = errorTypeList[i].str;
-    	if (errorTypeList[i].code == LastError) break;
+        errStr = errorTypeList[i].str;
+        if (errorTypeList[i].code == LastError) break;
     }
     PaintCenteredString(76, 172, 126, 14, errStr, Active);
 
@@ -345,12 +349,12 @@ void TestMonitorWndProc() {
  *******************************************************************************/
 
 void UpdateRunTimeDisplay() {
-	GetDC(hTestMonitor);
-	PaintTestPhase();
-	PaintTheBarGraphs(true);
-	PaintTestStatistics(true);
-	PaintCartStatus();// Added by MLT
-	ReleaseDC(hTestMonitor);
+    GetDC(hTestMonitor);
+    PaintTestPhase();
+    PaintTheBarGraphs(true);
+    PaintTestStatistics(true);
+    PaintCartStatus();// Added by MLT
+    ReleaseDC(hTestMonitor);
 }
 
 /*******************************************************************************
@@ -358,11 +362,11 @@ void UpdateRunTimeDisplay() {
  *******************************************************************************/
 
 void UpdateCurrentSector() {
-	GetDC(hTestMonitor);
-	char szString[40];
-	sprintf(szString, szCenteredDecimal, SingleTransferLBA);
-	PaintCenteredString(76, 155, 126, 14, szString, true);
-	ReleaseDC(hTestMonitor);
+    GetDC(hTestMonitor);
+    char szString[40];
+    sprintf(szString, szCenteredDecimal, SingleTransferLBA);
+    PaintCenteredString(76, 155, 126, 14, szString, true);
+    ReleaseDC(hTestMonitor);
 }
 
 /*******************************************************************************
@@ -370,9 +374,9 @@ void UpdateCurrentSector() {
  *******************************************************************************/
 
 void UpdateRunPhaseDisplay() {
-	GetDC(hTestMonitor);
-	PaintTestPhase();
-	ReleaseDC(hTestMonitor);
+    GetDC(hTestMonitor);
+    PaintTestPhase();
+    ReleaseDC(hTestMonitor);
 }
 
 /*******************************************************************************
@@ -380,4 +384,5 @@ void UpdateRunPhaseDisplay() {
  *******************************************************************************/
 
 void ErrorSound() {
+    SysBeep(10);
 }

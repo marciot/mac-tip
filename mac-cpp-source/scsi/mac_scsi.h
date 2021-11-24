@@ -4,7 +4,7 @@ typedef Boolean bool;
 
 enum {
     SCSI_Cmd_RequestSense   = 0x03,
-    SCSI_Cmd_FormatUnit	    = 0x04,
+    SCSI_Cmd_FormatUnit     = 0x04,
     SCSI_Cmd_NonSenseData   = 0x06,
     SCSI_Cmd_Read           = 0x08,
     SCSI_Cmd_Write          = 0x0a,

@@ -1,7 +1,7 @@
 #include "tip.h"
 
 const char *szWindowTitle = "TIP 2.1b -- Zip & Jaz Drive and Cartridge Testing System";
-const char *szCopyright_1 = "Copyright (c) 2006	by";
+const char *szCopyright_1 = "Copyright (c) 2006 by";
 const char *szCopyright_2 = "Gibson Research Corp.";
 
 const char *szSide0 = "Side 0";
@@ -10,7 +10,7 @@ const char *szSpaceDashSpace = " - ";
 
 const char *szBarChartPercent = " %ld%% ";
 const char *szCenteredDecimal = "%ld";
-const char *szCenteredHex     = "ErrorCode:	%06lX";
+const char *szCenteredHex     = "ErrorCode: %06lX";
 const char *szHoursMinsSecs   = "%ld:%02ld:%02ld";
 
 const char *szCartStatus = "Cartridge Status:";

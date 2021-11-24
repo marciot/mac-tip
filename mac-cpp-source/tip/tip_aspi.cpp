@@ -5,6 +5,7 @@
 #include "tip.h"
 
 //#define DEMO
+#define NO_EXCESS_READS
 
 #define BYTE_AT(a)  *((char*)&(a))
 #define WORD_AT(a)  *((short*)&(a))
@@ -25,9 +26,9 @@
 #define JAZ_2GB_BOOT 0x0E00
 
 struct DEFECT_LIST_HEADER {
-    char DLH_reserved; // (00h)
-    char DLH_BitFlags; // [000] [P] [G] [xxx - defect list format]
-    char DLH_DefectListLength;
+    char  DLH_reserved; // (00h)
+    char  DLH_BitFlags; // [000] [P] [G] [xxx - defect list format]
+    short DLH_DefectListLength;
 };
 
 //-------------------------- Drive Array Status Flags ---------------------------
@@ -60,7 +61,7 @@ struct DEFECT_LIST_HEADER {
 #define DRIVE_A_SUPPORT_BIAS                 32 // reduce total by 32 for DRIVE A support
 
 #define BYTES_PER_SECTOR 512
-#define MAX_SECTORS_PER_TEST 20
+#define MAX_SECTORS_PER_TEST 50
 
 #define BADNESS_THRESHOLD 10
 
@@ -170,23 +171,22 @@ long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen) {
     // call the SCSI interface to forward the command to the device
     OSErr err = scsi_cmd(Device, lpCmdBlk, cmd_length, lpIoBuf, IoBufLen, 0, cmd_flags, &cmd_status);
     if(err != noErr) {
-    	return SS_ERR;
+        return SS_ERR;
     }
     if(cmd_status == 0) {
-        printf("SCSI OK\n");
         // if the command did not generate any Sense Data, just return NULL
         return 0;
     }
     else if(cmd_status == 2) { // Check Condition
-        printf("SCSI CHK CONDITION\n");
         // Request sense data
         scsi_sense_reply sense_data;
         scsi_request_sense_data(Device, &sense_data);
+        printf("SCSI CHECK CONDITION (KEY %x, ASC %x, ASCQ %x)\n", sense_data.key, sense_data.asc, sense_data.ascq);
         // okay, we have an SS_ERR condition, let's check the SENSE DATA
         // assemble [00 ASC ASCQ SenseKey]
-        return (sense_data.asc << 16) ||
-               (sense_data.ascq << 8) ||
-                sense_data.key;
+        return (long(sense_data.asc) << 16) |
+               (long(sense_data.ascq) << 8) |
+               (long(sense_data.key)      );
     }
     else {
         // else, if it's *NOT* a "Sense Data" error (SS_ERR)
@@ -209,9 +209,13 @@ long GetModePage(short Device, short PageToGet, void *pBuffer, short BufLen) {
  * SET MODE PAGE
  *******************************************************************************/
 long SetModePage(short Device, void *pBuffer) {
-    char Scsi[6] = {0}; // init the SCSI parameter block
     char* ebx = (char*) pBuffer; // get a pointer to the top of buffer
     char ecx = ebx[0] + 1; // adjust it up by one
+
+    ebx[0] = 0; // now clear the two reserved bytes
+    ebx[2] = 0;
+
+    char Scsi[6] = {0}; // init the SCSI parameter block
     Scsi[0] = SCSI_Cmd_ModeSelect; // set the command
     Scsi[1] = 0x10; // set the Page Format bit
     Scsi[4] = ecx; // set the parameter list length
@@ -237,7 +241,13 @@ void ModifyModePage(char *PageBuff, char ecc, char retries) {
 
 void SetErrorRecovery(bool Retries, bool ECC, bool Testing) {
     char PageBuff[40];
-    GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, sizeof(PageBuff));
+
+    #ifdef NO_EXCESS_READS
+        // Limit reads to 20 bytes to prevent controller errors
+        GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, 20);
+    #else
+        GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, sizeof(PageBuff));
+    #endif
 
     #define EARLY_RECOVERY 0x08
     #define PER            0x04
@@ -260,7 +270,7 @@ void SetErrorRecovery(bool Retries, bool ECC, bool Testing) {
         retries = 0;
 
     ModifyModePage(PageBuff, ecc, retries);
-    long eax = SetModePage(CurrentDevice, PageBuff);
+    const long eax = SetModePage(CurrentDevice, PageBuff);
     // if we had an invalid field in the CDB (the EER bit was on)
     if (eax == 0x00260005) {
         GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, sizeof(PageBuff));
@@ -339,8 +349,13 @@ void GetSpareSectorCounts(bool) {
         // rather than 72; it looks like this code is causing a SCSI transfer error
         // here... might be better to conditionally check for Jaz drive
         char DiskStat[72];
-        eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
-        if (!eax) /*goto ListChk;*/ return;
+        #ifdef NO_EXCESS_READS
+            eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, 63);
+            if (eax) return;
+        #else
+            eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
+            if (!eax) /*goto ListChk;*/ return;
+        #endif
         // --------------------------------------------------------------------------
         ch = 0; // clear the DRIVE_A_SUPPORT
         if (JazDrive) {
@@ -378,6 +393,7 @@ void GetSpareSectorCounts(bool) {
         Side_0_SparesCount = eax;
         MAKE_LITTLE_ENDIAN(ebx); // make it little endian
         Side_1_SparesCount = ebx;
+
         // compute the  number of troubles we encountered during the testing
         FirmErrors =  Initial_Side_0_Spares - Side_0_SparesCount;
         FirmErrors += Initial_Side_1_Spares - Side_1_SparesCount;
@@ -386,6 +402,7 @@ void GetSpareSectorCounts(bool) {
             CartridgeStatus = DISK_TEST_FAILURE;
             return;
         }
+
         // MLT: The code for removing the ZIP protection has been omitted
         return; // return zero since no error
     }
@@ -423,16 +440,16 @@ void PrepareToBeginTesting() {
     HardErrors                = 0;
     UserInterrupt             = 0;
     LastError                 = 0;
-	#ifdef DEMO
-    	LastLBAOnCartridge        = 99999;
-    	SoftErrors                = 6;
-    	FirmErrors                = 2;
-    	HardErrors                = 1;
-    	UserInterrupt             = 0;
-    	LastError                 = 0x0C8001;
-		Side_0_SparesCount        = 12;
-		Side_1_SparesCount        = 20;
-	#endif
+    #ifdef DEMO
+        LastLBAOnCartridge        = 99999;
+        SoftErrors                = 6;
+        FirmErrors                = 2;
+        HardErrors                = 1;
+        UserInterrupt             = 0;
+        LastError                 = 0x0C8001;
+        Side_0_SparesCount        = 12;
+        Side_1_SparesCount        = 20;
+    #endif
 }
 
 /*******************************************************************************
@@ -462,20 +479,19 @@ void BumpErrorCounts(long ErrorCode) {
  * PERFORM REGION TRANSFER
  *******************************************************************************/
 long PerformRegionTransfer(short XferCmd, void *pBuffer) {
-	return -1;
     char Scsi[10] = {0}; // clear out the SCSI CDB
     const long InitialHardErrors = HardErrors;
-    
+
     SetErrorRecovery(false, false, true); // disable Retries & ECC
-    
+
     Scsi[0] = XferCmd;
     DWORD_AT(Scsi[2]) = MAKE_BIG_ENDIAN(FirstLBASector); // WHICH LBA's to read, BIG endian
      WORD_AT(Scsi[7]) = MAKE_BIG_ENDIAN(NumberOfLBAs);   // HOW MANY to read, BIG endian
     long eax = SCSICommand(CurrentDevice, Scsi, pBuffer, NumberOfLBAs * BYTES_PER_SECTOR);
-    
-    return 1;
     // if we failed somewhere during our transfer ... let's zero in on it
     if (eax) {
+        printf("Error during transfer %lx (lba: %ld)\n", eax, FirstLBASector);
+
         if ( eax == SS_ERR || // if it's a CONTROLLER ERROR, skip!
              eax == BUFFER_TOO_BIG ||
              eax == LBA_TOO_LARGE) {
@@ -485,39 +501,39 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
         //--------------------------------------------------------------------------
         // Save error and current Soft + Hard Error count to see if we do FIND the glitch ...
         const long GlitchError = eax; // save the error which stopped us!
-        const long GlitchCount = SoftErrors + HardErrors; 
+        const long GlitchCount = SoftErrors + HardErrors;
         char *LocalBuffer = (char*) pBuffer;
         ErrorSound();
 
-		SingleTransferLBA = FirstLBASector;
-		
+        SingleTransferLBA = FirstLBASector;
+
         // Perform transfer LBA block at a time
         for(long i = 0; i < NumberOfLBAs; ++i) {
-	        UpdateCurrentSector();
-	        
+            UpdateCurrentSector();
+
             // setup for our series of transfer tests ...
-            
+
             // disable all recovery techniques
             SetErrorRecovery(false, false, true); // disable Retries & ECC
-            
+
             memset(Scsi, 0, sizeof(Scsi)); // clear out the SCSI CDB
             Scsi[0] = XferCmd;
             DWORD_AT(Scsi[2]) = MAKE_BIG_ENDIAN(SingleTransferLBA); // WHICH LBA to read, BIG endian
              WORD_AT(Scsi[7]) = MAKE_BIG_ENDIAN(1);                 // a single sector
             eax = SCSICommand(CurrentDevice, Scsi, LocalBuffer, BYTES_PER_SECTOR);
-            
+
             if (eax) {
                 // some sort of problem encountered!
                 if (eax == SS_ERR) goto Exit; // if it's a CONTROLLER ERROR, skip!
-                if (eax & 0xFF == 1) goto PostTheError; // did we recover?    
-                
+                if (eax & 0xFF == 1) goto PostTheError; // did we recover?
+
                 SetErrorRecovery(true, false, true); // enable retries
                 eax = SCSICommand(CurrentDevice, Scsi, LocalBuffer, BYTES_PER_SECTOR);
                 if (eax) {
                     // failed with retries
                     if (eax == SS_ERR) goto Exit; // if it's a CONTROLLER ERROR, skip!
                     if (eax & 0xFF == 1) goto PostTheError; // did we recover?
-                    
+
                     SetErrorRecovery(true, true, true); // enable retries AND EEC
                     eax = SCSICommand(CurrentDevice, Scsi, LocalBuffer, BYTES_PER_SECTOR);
                     if (eax) {
@@ -539,14 +555,14 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
                 BumpErrorCounts(eax); // given eax, count the errors
                 GetSpareSectorCounts(false); // update the Cart's Condition
                 UpdateRunTimeDisplay();
-                
-            	LocalBuffer += BYTES_PER_SECTOR;
-            	SingleTransferLBA++;
-            	if(UserInterrupt) break;
+
+                if(UserInterrupt) break;
             }
+            LocalBuffer += BYTES_PER_SECTOR;
+            SingleTransferLBA++;
             ProcessPendingMessages();
         }
-        
+
         // now see whether we *did* found something to complain about ...
         eax = SoftErrors + HardErrors;
         if (eax == GlitchCount) {
@@ -582,34 +598,37 @@ long TestTheDisk() {
     void *pPatternBuffer  = malloc(MAX_SECTORS_PER_TEST * BYTES_PER_SECTOR);
     void *pUserDataBuffer = malloc(MAX_SECTORS_PER_TEST * BYTES_PER_SECTOR);
 
-	if(pPatternBuffer == NULL || pUserDataBuffer == NULL) {
-		printf("Allocation error\n");
-		return -1;
-	}
-	
+    if(pPatternBuffer == NULL || pUserDataBuffer == NULL) {
+        printf("Allocation error\n");
+        return -1;
+    }
+
     CartridgeStatus = DISK_TEST_UNDERWAY;
     TestingPhase = TESTING_STARTUP; // inhibit stopping now
     SetButtonText(szPressToStop);
-    
+
     LockCurrentDrive(); // prevent media removal
+
+    GetSpareSectorCounts(false); // update the Cart's Condition
+    UpdateRunTimeDisplay();
 
     // Standard Testing Operation
     StartingInstant = GetSystemTime();
-    
+
     do {
-    	ProcessPendingMessages();
-    	
-    	NumberOfLBAs = MAX_SECTORS_PER_TEST;
-    	
-    	if(LastLBAOnCartridge) {
-    		if (FirstLBASector + NumberOfLBAs > LastLBAOnCartridge + 1) {
-    			NumberOfLBAs = LastLBAOnCartridge - FirstLBASector + 1;
-    		}
-    		// compute the percentage complete
-    		PercentComplete = FirstLBASector * 100 / LastLBAOnCartridge;
-    	}
-		
-		if(NumberOfLBAs == 0) break;
+        ProcessPendingMessages();
+
+        NumberOfLBAs = MAX_SECTORS_PER_TEST;
+
+        if(LastLBAOnCartridge) {
+            if (FirstLBASector + NumberOfLBAs > LastLBAOnCartridge + 1) {
+                NumberOfLBAs = LastLBAOnCartridge - FirstLBASector + 1;
+            }
+            // compute the percentage complete
+            PercentComplete = FirstLBASector * 100 / LastLBAOnCartridge;
+        }
+
+        if(NumberOfLBAs == 0) break;
 
         // uppdate the elapsed time
         SecondsElapsed = GetElapsedTimeInSeconds();
@@ -617,17 +636,17 @@ long TestTheDisk() {
         // get a random pattern of data to write
         const long DataPattern = rand();
         memset(pPatternBuffer, DataPattern, sizeof(pPatternBuffer));
-		
+
         // update the cartridge's status
         GetSpareSectorCounts(false); // update the Cart's Condition
 
         TestingPhase = READING_DATA;
-        
+
         UpdateRunTimeDisplay();
-        
+
         long eax = PerformRegionTransfer(SCSI_Cmd_ReadMany, pUserDataBuffer);
-         
-        if(eax == 0) {
+
+        /*if(eax == 0) {
             // -------------------------------
             TestingPhase = WRITING_PATT;
             UpdateRunPhaseDisplay();
@@ -646,17 +665,17 @@ long TestTheDisk() {
             goto GetOut;
         }
         if (CartridgeStatus != DISK_TEST_UNDERWAY) {
-        	break;
-        }
+            break;
+        }*/
         // bump the FirstLBASector up for the next transfer
         FirstLBASector += NumberOfLBAs;
     } while(!UserInterrupt);
     // show that we're post-test
 
 GetOut:
-	free(pPatternBuffer);
-	free(pUserDataBuffer);
-	
+    free(pPatternBuffer);
+    free(pUserDataBuffer);
+
     TestingPhase = UNTESTED;
     UnlockCurrentDrive();
     SetErrorRecovery(true, true, false); // reenable Retries & ECC

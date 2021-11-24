@@ -3,7 +3,7 @@ typedef Boolean bool;
 
 extern WindowPtr tipWindow;
 
-void run_tip();
+void run_tip(int id);
 
 #define MINIMUM_JAZ_SPARES 500
 #define MAXIMUM_JAZ_SPARES 2557
@@ -70,13 +70,13 @@ unsigned long GetSystemTime();
 #define hMainWnd       0,  40
 
 #define GetDC(h)     {GrafPtr oldPort; \
-            	     GetPort(&oldPort); \
-            	     SetPort(tipWindow); \
-            	     SetOrigin(h);
-            	
+                     GetPort(&oldPort); \
+                     SetPort(tipWindow); \
+                     SetOrigin(h);
+
 #define ReleaseDC(h) SetOrigin(0,0); \
                      SetPort(oldPort);}
-					
+
 
 // ------------------------------   Cartridge Status -------------------------------
 
@@ -162,9 +162,9 @@ extern const char *szBack;
 extern const char *szNext;
 extern const char *szQuit;
 
-#define	IDB_BACK 0xFF00
-#define	IDB_NEXT 0xFF01
-#define	IDB_QUIT 0xFF02
+#define IDB_BACK 0xFF00
+#define IDB_NEXT 0xFF01
+#define IDB_QUIT 0xFF02
 #define IDB_TEST 0xFF03
 
 typedef struct {long id; const char *name; int x; int y; int w; int h; bool visible;} BtnList;
@@ -180,6 +180,7 @@ void SunkenFields(Rect *pFirstRect, long count, long yspacing);
 void PaintCartStatus();
 void PaintTextArray(TextList *list, long color);
 void PaintBarGraph(int Xleft, int Ytop, int XWidth, int YHeight, long BarColor, long BarValue, char *pRightText, bool Active);
+int CvrtIntoPrcnt(long val, long max);
 void PaintTestPhase();
 void PaintTheBarGraphs(bool Active);
 void PaintTestStatistics(bool Active);
