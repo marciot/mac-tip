@@ -13,7 +13,9 @@ WindowPtr tipWindow;
 
 static int gDone;
 static bool AllowColor;
-static ControlHandle actionBtn = 0;
+static bool timerEnabled = true;
+static ControlHandle testBtn = 0;
+static ControlHandle exitBtn = 0;
 
 void NewTipWindow();
 void DestroyTipWindow();
@@ -32,6 +34,9 @@ void run_tip(int id) {
         EventRecord event;
         if (WaitNextEvent(everyEvent, &event, GetCaretTime(), cursorRgn)) {
             DoEvent(event, &cursorRgn);
+        }
+        if(timerEnabled) {
+            ApplicationTimerProc();
         }
     } while (!gDone);
 
@@ -79,17 +84,14 @@ void NewTipWindow() {
         StrToPascal(title, tipBtns[i].name);
         ControlHandle h = NewControl(tipWindow, &rect, title, true, 0, 0, 0, 0, tipBtns[i].id);
         if(tipBtns[i].id == IDB_TEST) {
-            actionBtn = h;
+            testBtn = h;
+        }
+        if(tipBtns[i].id == IDB_QUIT) {
+            exitBtn = h;
         }
     }
 
     ReleaseDC(hMainWnd);
-
-    // Initialize tip
-    PrepareToBeginTesting();
-    GetSpareSectorCounts(false);
-    FirmErrors = 0;
-    UpdateRunTimeDisplay();
 }
 
 void DestroyTipWindow() {
@@ -347,16 +349,39 @@ unsigned long GetSystemTime() {
 }
 
 /*******************************************************************************
- * SET BUTTON TEXT
+ * SET WINDOW TEXT
  *******************************************************************************/
-void SetButtonText(const char *str) {
+void SetWindowText(int id, const char *str) {
     Str255 pStr;
     StrToPascal(pStr, str);
-    if(actionBtn) {
+    if(testBtn && id == hTestButton) {
         GetDC(hMainWnd);
-        SetCTitle(actionBtn, pStr);
+        SetCTitle(testBtn, pStr);
         ReleaseDC(hMainWnd);
     }
+}
+
+/*******************************************************************************
+ * ENABLE WINDOW
+ *******************************************************************************/
+void EnableWindow(int id, bool enabled) {
+    ControlHandle hCntl;
+    if(id == hTestButton) hCntl = testBtn;
+    if(id == hExitButton) hCntl = exitBtn;
+    if(hCntl) {
+        GetDC(hMainWnd);
+        HiliteControl(hCntl, enabled ? 0 : 255);
+        ReleaseDC(hMainWnd);
+    }
+}
+
+/*******************************************************************************
+ * INVALIDATE RECT
+ *******************************************************************************/
+void InvalidateRect(int id) {
+    GetDC(id);
+    InvalRect(&qd.thePort->portRect);
+    ReleaseDC(id);
 }
 
 /*******************************************************************************
@@ -364,6 +389,20 @@ void SetButtonText(const char *str) {
  *******************************************************************************/
 void PostQuitMessage() {
     gDone = true;
+}
+
+/*******************************************************************************
+ * START APPLICATION TIMER
+ *******************************************************************************/
+void StartApplicationTimer() {
+    timerEnabled = true;
+}
+
+/*******************************************************************************
+ * STOP APPLICATION TIMER
+ *******************************************************************************/
+void StopApplicationTimer() {
+    timerEnabled = false;
 }
 
 /*******************************************************************************

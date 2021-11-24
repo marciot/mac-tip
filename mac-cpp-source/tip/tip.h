@@ -60,19 +60,21 @@ long GetTextExtent(const char *str, unsigned long len);
 void TextOut(int x, int y, Str255 str);
 void TextOut(int x, int y, const char *str);
 void TextOutCentered(int x, int y, int w, int h, const char *str);
-void SetButtonText(const char *str);
+void SetWindowText(int id, const char *str);
+void EnableWindow(int id, bool enabled);
+void InvalidateRect(int id);
 void Rectangle(int left, int top, int right, int bottom);
 void DrawEdge(Rect *qrc, int edge, int grfFlags);
+void StartApplicationTimer();
+void StopApplicationTimer();
 void PostQuitMessage();
 unsigned long GetSystemTime();
-
-#define hTestMonitor -20, -10
-#define hMainWnd       0,  40
 
 #define GetDC(h)     {GrafPtr oldPort; \
                      GetPort(&oldPort); \
                      SetPort(tipWindow); \
-                     SetOrigin(h);
+                     if(h == hTestMonitor) SetOrigin(-20, -10); \
+                     if(h == hMainWnd) SetOrigin(0,  40);
 
 #define ReleaseDC(h) SetOrigin(0,0); \
                      SetPort(oldPort);}
@@ -162,6 +164,13 @@ extern const char *szBack;
 extern const char *szNext;
 extern const char *szQuit;
 
+enum {
+    hMainWnd,
+    hTestMonitor,
+    hTestButton,
+    hExitButton
+};
+
 #define IDB_BACK 0xFF00
 #define IDB_NEXT 0xFF01
 #define IDB_QUIT 0xFF02
@@ -189,10 +198,13 @@ void CvrtSecondsToHMSstring(char *szString, long seconds);
 void UpdateCurrentSector();
 void UpdateRunTimeDisplay();
 void UpdateRunPhaseDisplay();
+void PreventProgramExit();
+void AllowProgramExit();
 void ErrorSound();
 void ProcessPendingMessages();
 void WndProc(long iMessage, long wParam);
 void TestMonitorWndProc();
+void ApplicationTimerProc();
 void TestButtonClicked();
 
 void GetCommandDetails(char command, char &cmd_flags, char &cmd_length);
@@ -205,7 +217,9 @@ long GetNonSenseData(short Device, short DataPage, void *Buffer, short BufLen);
 long LockCurrentDrive();
 long UnlockCurrentDrive();
 long SpinUpIomegaCartridge(short Device);
-void GetSpareSectorCounts(bool);
+long GetSpareSectorCounts(bool);
+void HandleDriveChanging();
+void SetCartridgeStatusToEAX(long eax);
 long PerformRegionTransfer(short XferCmd, void *pBuffer);
 long TestTheDisk();
 long GetElapsedTimeInSeconds();

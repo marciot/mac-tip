@@ -78,7 +78,9 @@ enum {
     szBadResult,
     szInterrupted,
     szExplainResult,
-    szPerfectResult
+    szPerfectResult,
+    szNoSpares,
+    szOutOfSpares
 };
 
 long CurrentDevice = 0;
@@ -331,7 +333,7 @@ long SpinUpIomegaCartridge(short Device) {
  * into the RichText control, else it sets the number of spares available
  *******************************************************************************/
 
-void GetSpareSectorCounts(bool) {
+long GetSpareSectorCounts(bool) {
     DEFECT_LIST_HEADER DefectHeader;
     long eax = 0, ebx, edx;
     short ch, cl;
@@ -351,10 +353,10 @@ void GetSpareSectorCounts(bool) {
         char DiskStat[72];
         #ifdef NO_EXCESS_READS
             eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, 63);
-            if (eax) return;
+            if (eax) return eax;
         #else
             eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
-            if (!eax) /*goto ListChk;*/ return;
+            if (!eax) /*goto ListChk;*/ return eax;
         #endif
         // --------------------------------------------------------------------------
         ch = 0; // clear the DRIVE_A_SUPPORT
@@ -378,8 +380,7 @@ void GetSpareSectorCounts(bool) {
                 edx = DWORD_AT(DiskStat[OLD_ZIP_LAST_LBA_OFFSET]);
             }
             if(ebx == 0) {
-                CartridgeStatus = DISK_TEST_FAILURE;
-                return;
+                goto NoSpares;
             }
         }
         //---------------------------
@@ -399,23 +400,150 @@ void GetSpareSectorCounts(bool) {
         FirmErrors += Initial_Side_1_Spares - Side_1_SparesCount;
         // check to see whether we have ANY spare sectors remaining
         if(!Side_0_SparesCount && !Side_1_SparesCount) {
+            NoSpares:
             CartridgeStatus = DISK_TEST_FAILURE;
-            return;
+            eax = szNoSpares;
+            // if were running give them a different error message
+            if(TestingPhase) {
+                eax = szOutOfSpares;
+            }
+            goto ErrorExit;
         }
 
         // MLT: The code for removing the ZIP protection has been omitted
-        return; // return zero since no error
+        return 0; // return zero since no error
     }
     else {
         // trouble of some sort ... so suppress controls and
         // show the richedit control for the trouble
         if (eax == DEFECT_LIST_READ_ERROR) {
             CartridgeStatus = DISK_Z_TRACK_FAILURE;
-            return;
+            ErrorExit:
+            return -1;
         }
         else if (eax == MEDIA_NOT_PRESENT) {
             CartridgeStatus = MEDIA_NOT_PRESENT;
         }
+    }
+    return eax;
+}
+
+/*******************************************************************************
+ * HANDLE DRIVE CHANGING
+ *******************************************************************************/
+void HandleDriveChanging() {
+    // MLT: At the moment, we only handle one drive.
+    long eax;
+    char DiskStat[72];
+    #ifdef NO_EXCESS_READS
+        eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, 63);
+        if (eax) return;
+    #else
+        eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
+        if (!eax) return;
+    #endif
+    char status;
+    if (DiskStat[0] == DISK_STATUS_PAGE) {
+        status = DiskStat[NEW_DISK_STATUS_OFFSET];
+    } else {
+        status = DiskStat[OLD_DISK_STATUS_OFFSET];
+    }
+    // we're checking the current drive ... make SURE that
+    // it is *NOT* empty! If it *IS* empty, kill current
+    if(status == DISK_NOT_PRESENT) {
+        SetCartridgeStatusToEAX(status);
+    }
+    // if it's not already set correctly *and* either
+    // the cart status is one of the pre-test ones, or
+    // the NEW status from the cart is NOT "at speed" ...
+    if((status != CartridgeStatus) && ((CartridgeStatus <= DISK_STALLED) || (status != DISK_AT_SPEED))) {
+        SetCartridgeStatusToEAX(status);
+    }
+}
+
+//-----------------------------------------------------------------------------
+// SetCartridgeStatusToEAX
+//-----------------------------------------------------------------------------
+
+void SetCartridgeStatusToEAX(long eax) {
+    long PriorStatus = CartridgeStatus;
+    CartridgeStatus = eax;
+
+    // Set the text of the "action initiate button"
+    const char *esi;
+    switch (CartridgeStatus) {
+        case DISK_SPUN_DOWN:
+            // set the button to "Start Disk Spinning"
+            esi = szPressToSpin;
+            break;
+        case DISK_TEST_UNDERWAY:
+            // set the button to "Stop Testing"
+            esi = szPressToStop;
+            break;
+        case DISK_NOT_PRESENT:
+            goto DisableActions;
+        case DISK_AT_SPEED:
+            eax = GetSpareSectorCounts(true); // update the Cart Condition
+            if(eax == MEDIA_NOT_PRESENT) {
+                goto DisableActions;
+            }
+            //TroubleFlag = eax; // decide whether we're in trouble
+            esi = szPressToEject; // presume trouble
+            if(!eax) {
+                Initial_Side_0_Spares = Side_0_SparesCount;
+                Initial_Side_1_Spares = Side_1_SparesCount;
+                FirmErrors = 0;
+                // check to see if we have enough spares to start
+                if(JazDrive) {
+                    if(Side_0_SparesCount < MINIMUM_JAZ_SPARES)
+                        goto InsufficientSpares;
+                }
+                else {
+                    if(Side_0_SparesCount < MINIMUM_ZIP_SPARES) {
+                        goto InsufficientSpares;
+                    }
+                    if(Side_1_SparesCount < MINIMUM_ZIP_SPARES) {
+                    InsufficientSpares:
+                        CartridgeStatus = DISK_LOW_SPARES;
+                        esi = szPressToProceed;
+                        goto EnableTestBtn;
+                    }
+                }
+                // if no trouble, get ready to start testing...
+                PrepareToBeginTesting();
+                esi = szPressToStart;
+            }
+            // The disk *IS* at speed so enable the action button!
+            EnableTestBtn:
+            EnableWindow(hTestButton, true);
+            break;
+        default:
+            // set the button to "One Moment Please"
+            DisableActions:
+            EnableWindow(hTestButton, false);
+            esi = szOneMoment;
+    }
+    // set the Window's text based upon setting of esi
+    SetWindowText(hTestButton, esi);
+    // based upon the TroubleFlag, show them the proper page set
+    // SetTabErrorMode(TroubleFlag)
+    // and if CartridgeStatus has changed, refresh the entire panel!
+    bool ecx = false;
+    if((PriorStatus == DISK_AT_SPEED) ||
+       (PriorStatus == DISK_SPUN_DOWN)||
+       (PriorStatus >= DISK_LOW_SPARES)) {
+       ecx = !ecx;
+    }
+    if((CartridgeStatus == DISK_AT_SPEED) ||
+       (CartridgeStatus >= DISK_LOW_SPARES)) {
+        ecx = !ecx;
+    }
+    if (ecx) { // update the entire panel's data
+        InvalidateRect(hTestMonitor);
+    } else { // only paint the new cartridge status
+        GetDC(hTestMonitor);
+        PaintCartStatus();
+        ReleaseDC(hTestMonitor);
     }
 }
 
@@ -603,9 +731,13 @@ long TestTheDisk() {
         return -1;
     }
 
+    StopApplicationTimer();
+
+    PreventProgramExit();
     CartridgeStatus = DISK_TEST_UNDERWAY;
     TestingPhase = TESTING_STARTUP; // inhibit stopping now
-    SetButtonText(szPressToStop);
+    SetWindowText(hTestButton, szPressToStop);
+    InvalidateRect(hTestMonitor);
 
     LockCurrentDrive(); // prevent media removal
 
@@ -679,25 +811,29 @@ GetOut:
     TestingPhase = UNTESTED;
     UnlockCurrentDrive();
     SetErrorRecovery(true, true, false); // reenable Retries & ECC
-    SetButtonText(szPressToStart);
+    SetWindowText(hTestButton, szPressToStart);
     CartridgeStatus = DISK_AT_SPEED;
-    UpdateRunTimeDisplay(); // added by mlt
+    AllowProgramExit();
 
     // compute the number of serious troubles
-    long errors = FirmErrors + HardErrors;
+    long eax, errors = FirmErrors + HardErrors;
     if (errors >= BADNESS_THRESHOLD) {
-        return szBadResult;
+        eax = szBadResult;
     }
     else if (UserInterrupt) {
-        return szInterrupted;
+        eax = szInterrupted;
     }
     else {
         // it wasn't interrupted, nor seriously bad, was it perfect?
         errors += SoftErrors;
         if(errors) {
-            return szExplainResult;
+            eax = szExplainResult;
         } else {
-            return szPerfectResult;
+            eax = szPerfectResult;
         }
     }
+
+    InvalidateRect(hTestMonitor);
+    StartApplicationTimer();
+    return eax;
 }
