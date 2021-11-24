@@ -83,5 +83,3 @@ OSErr scsi_cmd(int id, void *cmd, size_t clen, void *buff, size_t siz, size_t cn
 OSErr scsi_inquiry(int id, int lun, scsi_inq_reply *buff);
 OSErr scsi_request_sense_data(int id, scsi_sense_reply *buff);
 OSErr scsi_get_class(int id, int lun, int &dev );
-
-

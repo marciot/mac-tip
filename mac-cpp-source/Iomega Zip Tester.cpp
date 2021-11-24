@@ -172,5 +172,3 @@ void printn( unsigned char *c, int n ) {
       c++;
    }
 }
-
-
