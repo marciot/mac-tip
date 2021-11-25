@@ -20,6 +20,16 @@ the original by GRC, I may have introduced errors during the conversion
 process. Please do not reach out to GRC for support on this Macintosh
 port.**
 
+How Can You Help?
+-----------------
+
+You can help this project in one of the following ways:
+
+* Star this project to show your support!
+* Sign up to beta test in the discussion forum!
+* Donate a 1 or 2GB Jaz cartridge so I can do some testing with that (I have a 2GB SCSI Jaz drive, but I do not have a cartridge).
+* Become a GitHub sponsor to help fund my open-source projects!
+
 Where are the binaries?
 -----------------------
 
