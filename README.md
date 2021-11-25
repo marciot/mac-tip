@@ -20,10 +20,10 @@ Power Macintosh G3, released in 1997.
 
 It has been tested in on the following environments:
 
-| Computer        | Memory | System | Drive               |
-|-----------------|--------|--------|---------------------|
-| Macintosh Plus  | 4MB    | 7.0.1  | Iomega Zip Plus 100 |
-| PowerBook 3400c | 144MB  | 8.6    | Iomega Zip 100      |
+| Computer        | Memory | System | Drive        |
+|-----------------|--------|--------|--------------|
+| Macintosh Plus  | 4MB    | 7.0.1  | Zip Plus 100 |
+| PowerBook 3400c | 144MB  | 8.6    | Zip 100      |
 
 What will not work or is missing:
 
@@ -112,10 +112,13 @@ About the code
 --------------
 
 Portions of the original code have been re-written in C++ and adapted
-for compilation using [Metrowerks CodeWarrior 8 Gold].
+for compilation using [Metrowerks CodeWarrior 8 Gold]. The code is located
+in the `mac-cpp-source` directory.
 
 <details>
 <summary>Click here to learn more about the code</summary></br>
+
+![Metrowerks CodeWarrior 8 Gold Project][mac-screenshot3]
 
 Native [Macintosh SCSI Manager] routines have been substituted for
 the Win32 ASPI routines and the UI has been re-created as closely as
@@ -148,6 +151,7 @@ his code in this repository with his permission.
 [GitHub account]: https://github.com/marciot
 [mac-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip1.png "Mac TIP Testing Screen"
 [mac-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/mac-cmd.png "Mac TIP Command Line"
+[mac-screenshot3]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip-cw8.png "Mac TIP Build Environment"
 [win-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/win-tip1.gif "Windows TIP About Screen"
 [win-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/win-tip2.gif "Windows TIP Testing Scren"
 [mac-plus]: https://github.com/marciot/mac-tip/raw/main/images/macplus-tip.jpg "TIP running on a Mac Plus"
