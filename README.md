@@ -29,6 +29,7 @@ You can help this project in one of the following ways:
 * Sign up to beta test in the discussion forum!
 * Donate a 1 or 2GB Jaz cartridge so I can do some testing with that (I have a 2GB SCSI Jaz drive, but I do not have a cartridge).
 * Become a GitHub sponsor to help fund my open-source projects!
+* If you have consulting work, in particular contract work pertaining to vintage computers or THREE.js, please hit me up via my [GitHub account]!
 
 Where are the binaries?
 -----------------------
@@ -68,12 +69,6 @@ SCSI device to use.
 At the present, I am unable to find any documented MacOS APIs for
 automatically unmounting volumes associated with a SCSI ID. Future versions
 may simplify the process if I find out how to do this.
-
-Got projects?
--------------
-
-If you have consulting work, particular contract work pertaining
-to vintage computers or THREE.js, please hit me up via my [GitHub account]!
 
 About the code
 --------------
