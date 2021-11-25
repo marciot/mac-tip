@@ -31,7 +31,7 @@ What will not work or is missing:
 * TIP will only do a read-pass and the write-tests have been disabled.
 * The functionality for operating with password or write protected disks is missing.
 * The partition recovery feature has been removed, since it is meant for PC disks.
-* The detailed post-test explanation screens are absent. For now, I refer you to the documentation on the [Trouble in Paradise] pages.
+* The detailed post-test explanation screens are absent. For now, I refer you to the [explanation document] from the assembly source archive. That document is broken up into parts indicated by words in square brackets.
 
 </details>
 
@@ -159,3 +159,4 @@ his code in this repository with his permission.
 [Trouble in Paradise]: https://www.grc.com/tip/clickdeath.htm
 [Metrowerks CodeWarrior 8 Gold]: https://www.macintoshrepository.org/11910-codewarrior-8-gold
 [Macintosh SCSI Manager]: https://developer.apple.com/legacy/library/documentation/mac/pdf/Devices/Scsi_Manager.pdf
+[explanation document]: https://github.com/marciot/mac-tip/raw/main/x86-asm-source/RTF.RTF
