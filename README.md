@@ -31,7 +31,7 @@ What will not work or is missing:
 * TIP will only do a read-pass and the write-tests have been disabled.
 * The functionality for operating with password or write protected disks is missing.
 * The partition recovery feature has been removed, since it is meant for PC disks.
-* The detailed post-test explanation screens are absent. For now, I refer you to the documentation at [Gibson Research Corp].
+* The detailed post-test explanation screens are absent. For now, I refer you to the documentation on the [Trouble in Paradise] pages.
 
 </details>
 
