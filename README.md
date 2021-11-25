@@ -12,8 +12,11 @@ Compatibility
 -------------
 
 This tool is meant for Macintosh computers with a SCSI port, which
-range from the Macintosh Plus, released in 1986, through the "Beige"
+range from the Macintosh Plus, released in 1986; through the "Beige"
 Power Macintosh G3, released in 1997.
+
+<details>
+<summary>Click here to read what works and what doesn't</summary></br>
 
 It has been tested in on the following environments:
 
@@ -21,6 +24,16 @@ It has been tested in on the following environments:
 |-----------------|--------|--------|---------------------|
 | Macintosh Plus  | 4MB    | 7.0.1  | Iomega Zip Plus 100 |
 | PowerBook 3400c | 144MB  | 8.6    | Iomega Zip 100      |
+
+What will not work or is missing:
+
+* Support for JAZ drives is currently missing.
+* TIP will only do a read-pass and the write-tests have been disabled.
+* The functionality for operating with password or write protected disks is missing.
+* The partition recovery feature has been removed, since it is meant for PC disks.
+* The detailed post-test explanation screens are absent. For now, I refer you to the documentation at [Gibson Research Corp].
+
+</details>
 
 Disclaimer
 ----------
