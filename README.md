@@ -26,17 +26,17 @@ How Can You Help?
 You can help this project in one of the following ways:
 
 * Star this project to show your support!
-* Sign up to beta test in the discussion forum!
+* Sign up to [beta test in the discussion forum](https://github.com/marciot/mac-tip/discussions/1#discussion-3704575)!
 * Donate a 1 or 2GB Jaz cartridge so I can do some testing with that (I have a 2GB SCSI Jaz drive, but I do not have a cartridge).
 * Become a GitHub sponsor to help fund my open-source projects!
-* If you have consulting work, in particular contract work pertaining to vintage computers or THREE.js, please hit me up via my [GitHub account]!
+* If you have consulting work, in particular contract work pertaining to retro-computers or THREE.js, please hit me up via my [GitHub account]!
 
 Where are the binaries?
 -----------------------
 
 Right now the port is in early testing, so I am not releasing any
 compiled binaries. There is always a risk of data loss with a tool like
-this, so please contact me directly if you want to beta test.
+this, so please post in the discussion forum if you want to beta test.
 
 Command console
 ---------------
