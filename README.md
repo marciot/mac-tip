@@ -94,11 +94,14 @@ his code in this repository with his permission.
 
 </details>
 
+![TIP Running on a Mac Plus][mac-plus]
+
 [GitHub account]: https://github.com/marciot
-[mac-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip1.png "TIP"
-[mac-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/mac-cmd.png "Command Line"
-[win-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/win-tip1.gif "TIP"
-[win-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/win-tip2.gif "TIP"
+[mac-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip1.png "Mac TIP Testing Screen"
+[mac-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/mac-cmd.png "Mac TIP Command Line"
+[win-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/win-tip1.gif "Windows TIP About Screen"
+[win-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/win-tip2.gif "Windows TIP Testing Scren"
+[mac-plus]: https://github.com/marciot/mac-tip/raw/main/images/macplus-tip.jpg "TIP running on a Mac Plus"
 [Gibson Research Corp]: https://www.grc.com
 [Trouble in Paradise]: https://www.grc.com/tip/clickdeath.htm
 [Metrowerks CodeWarrior 8 Gold]: https://www.macintoshrepository.org/11910-codewarrior-8-gold
