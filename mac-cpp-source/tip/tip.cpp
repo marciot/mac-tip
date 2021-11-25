@@ -169,12 +169,11 @@ void PaintBarGraph(int Xleft, int Ytop, int XWidth, int YHeight, long BarColor, 
         SetColor(BarColor, BLACK_COLOR);
         Rectangle(Xleft, Ytop, Xleft + AbsoluteBarWidth, Ytop + YHeight);
         // now place the floating percentage into the middle (if it fits there)
-        if(BarValue) {
+        if(BarValue > 0 && BarValue <= 100) {
             char PercentString[8];
             sprintf(PercentString, szBarChartPercent, BarValue);
             SetColor(WHITE_COLOR);
             TextOutCentered(Xleft, Ytop, AbsoluteBarWidth, YHeight, PercentString);
-
         }
     }
 }

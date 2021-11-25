@@ -52,15 +52,16 @@ void NewTipWindow() {
     AllowColor = theWorld.hasColorQD;
 
     Rect rect = qd.screenBits.bounds;
-    InsetRect(&rect, 50, 50);
+    rect.left = 7;
+    rect.top  = 43;
     rect.bottom = rect.top + 336 - 35;
     rect.right = rect.left + 467;
 
     Str255 title;
     StrToPascal(title, szWindowTitle);
     tipWindow = AllowColor ?
-        NewCWindow(NULL,&rect, title, true, 0, 0, true, 0) :
-        NewWindow(NULL,&rect,  title, true, 0, 0, true, 0);
+        NewCWindow(NULL,&rect, title, true, 0, (WindowPtr)-1, true, 0) :
+        NewWindow(NULL,&rect,  title, true, 0, (WindowPtr)-1, true, 0);
 
     GetDC(hMainWnd);
 
@@ -365,7 +366,7 @@ void SetWindowText(int id, const char *str) {
  * ENABLE WINDOW
  *******************************************************************************/
 void EnableWindow(int id, bool enabled) {
-    ControlHandle hCntl;
+    ControlHandle hCntl = 0;
     if(id == hTestButton) hCntl = testBtn;
     if(id == hExitButton) hCntl = exitBtn;
     if(hCntl) {

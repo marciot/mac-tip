@@ -11,7 +11,7 @@ void run_tip(int id);
 #define MAXIMUM_ZIP_SPARES 126
 
 extern long CurrentDevice;
-extern bool JazDrive; // true if the current drive
+extern long JazDrive; // true if the current drive
 extern long CartridgeStatus;
 extern long LastLBAOnCartridge;
 extern unsigned long StartingInstant;
@@ -217,7 +217,7 @@ long GetNonSenseData(short Device, short DataPage, void *Buffer, short BufLen);
 long LockCurrentDrive();
 long UnlockCurrentDrive();
 long SpinUpIomegaCartridge(short Device);
-long GetSpareSectorCounts(bool);
+long GetSpareSectorCounts(char);
 void HandleDriveChanging();
 void SetCartridgeStatusToEAX(long eax);
 long PerformRegionTransfer(short XferCmd, void *pBuffer);

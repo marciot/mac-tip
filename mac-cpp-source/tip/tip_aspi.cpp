@@ -7,12 +7,29 @@
 //#define DEMO
 #define NO_EXCESS_READS
 
-#define BYTE_AT(a)  *((char*)&(a))
-#define WORD_AT(a)  *((short*)&(a))
-#define DWORD_AT(a) *((long*)&(a))
-
 #define MAKE_LITTLE_ENDIAN(a) a // Don't do anything on 68000
 #define MAKE_BIG_ENDIAN(a)  a // Don't do anything on 68000
+
+//#define BYTE_AT(s, a)  *((char*)(s + a))
+//#define WORD_AT(s, a)  *((short*)(s + a))
+//#define DWORD_AT(s, a) *((long*)(s + a))
+
+// Allows unaligned memory access
+#define SET_BYTE_AT(s, a, v)  s[a  ] = v;
+#define SET_WORD_AT(s, a, v)  s[a  ] = (v & 0xFF00) >> 8; \
+                              s[a+1] = (v & 0x00FF);
+#define SET_DWORD_AT(s, a, v) s[a  ] = (v & 0xFF000000) >> 24; \
+                              s[a+1] = (v & 0x00FF0000) >> 16; \
+                              s[a+2] = (v & 0x0000FF00) >>  8; \
+                              s[a+3] = (v & 0x000000FF);
+
+#define GET_BYTE_AT(s, a)    ((unsigned char)((unsigned char)s[a  ]))
+#define GET_WORD_AT(s, a)  (((unsigned short)((unsigned char)s[a  ])) << 8)  | \
+                            ((unsigned short)((unsigned char)s[a+1]))
+#define GET_DWORD_AT(s, a) (((unsigned  long)((unsigned char)s[a  ])) << 24) | \
+                           (((unsigned  long)((unsigned char)s[a+1])) << 16) | \
+                           (((unsigned  long)((unsigned char)s[a+2])) <<  8) | \
+                            ((unsigned  long)((unsigned char)s[a+3]))
 
 // offsets to the various sector data images
 
@@ -61,7 +78,7 @@ struct DEFECT_LIST_HEADER {
 #define DRIVE_A_SUPPORT_BIAS                 32 // reduce total by 32 for DRIVE A support
 
 #define BYTES_PER_SECTOR 512
-#define MAX_SECTORS_PER_TEST 50
+#define MAX_SECTORS_PER_TEST 25
 
 #define BADNESS_THRESHOLD 10
 
@@ -85,8 +102,8 @@ enum {
 
 long CurrentDevice = 0;
 
-bool JazDrive; // true if the current drive
-long CartridgeStatus = /*DISK_NOT_PRESENT*/ DISK_AT_SPEED;
+long JazDrive = 0; // true if the current drive
+long CartridgeStatus = DISK_NOT_PRESENT;
 
 unsigned long StartingInstant;
 
@@ -288,6 +305,7 @@ void SetErrorRecovery(bool Retries, bool ECC, bool Testing) {
  * Given Adapter, Device, DataPage, and a Buffer to receive the data, this
  * fills the buffer we're given and returns with the SCSI Completion Code
  *******************************************************************************/
+
 long GetNonSenseData(short Device, short DataPage, void *Buffer, short BufLen) {
     char Scsi[6] = {0};
     Scsi[0] = SCSI_Cmd_NonSenseData; // do a Non-Sense Data Read
@@ -333,7 +351,7 @@ long SpinUpIomegaCartridge(short Device) {
  * into the RichText control, else it sets the number of spares available
  *******************************************************************************/
 
-long GetSpareSectorCounts(bool) {
+long GetSpareSectorCounts(char checkPassword) {
     DEFECT_LIST_HEADER DefectHeader;
     long eax = 0, ebx, edx;
     short ch, cl;
@@ -356,28 +374,28 @@ long GetSpareSectorCounts(bool) {
             if (eax) return eax;
         #else
             eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
-            if (!eax) /*goto ListChk;*/ return eax;
+            if (!eax) return eax;
         #endif
         // --------------------------------------------------------------------------
         ch = 0; // clear the DRIVE_A_SUPPORT
         if (JazDrive) {
-            eax = WORD_AT(DiskStat[JAZ_SPARES_COUNT_OFFSET]);
+            eax = GET_WORD_AT(DiskStat,  JAZ_SPARES_COUNT_OFFSET);
             ebx = 0;
-            cl  = BYTE_AT(DiskStat[JAZ_PROTECT_MODE_OFFSET]);
-            edx = DWORD_AT(DiskStat[JAZ_LAST_LBA_OFFSET]);
+            cl  = GET_BYTE_AT(DiskStat,  JAZ_PROTECT_MODE_OFFSET);
+            edx = GET_DWORD_AT(DiskStat, JAZ_LAST_LBA_OFFSET);
         } else {
             if (DiskStat[0] == DISK_STATUS_PAGE) {
-                eax = WORD_AT(DiskStat[NEW_ZIP_SIDE_0_SPARES_COUNT_OFFSET]);
-                ebx = WORD_AT(DiskStat[NEW_ZIP_SIDE_1_SPARES_COUNT_OFFSET]);
-                cl  = BYTE_AT(DiskStat[NEW_ZIP_PROTECT_MODE_OFFSET]);
-                edx = DWORD_AT(DiskStat[NEW_ZIP_LAST_LBA_OFFSET]);
+                eax = GET_WORD_AT(  DiskStat, NEW_ZIP_SIDE_0_SPARES_COUNT_OFFSET);
+                ebx = GET_WORD_AT(  DiskStat, NEW_ZIP_SIDE_1_SPARES_COUNT_OFFSET);
+                cl  = GET_BYTE_AT(  DiskStat, NEW_ZIP_PROTECT_MODE_OFFSET);
+                edx = GET_DWORD_AT( DiskStat, NEW_ZIP_LAST_LBA_OFFSET);
                 ch--; // set the DRIVE_A_SUPPORT
             }
             else {
-                eax = WORD_AT(DiskStat[OLD_ZIP_SIDE_0_SPARES_COUNT_OFFSET]);
-                ebx = WORD_AT(DiskStat[OLD_ZIP_SIDE_1_SPARES_COUNT_OFFSET]);
-                cl  = BYTE_AT(DiskStat[OLD_ZIP_PROTECT_MODE_OFFSET]);
-                edx = DWORD_AT(DiskStat[OLD_ZIP_LAST_LBA_OFFSET]);
+                eax = GET_WORD_AT(  DiskStat, OLD_ZIP_SIDE_0_SPARES_COUNT_OFFSET);
+                ebx = GET_WORD_AT(  DiskStat, OLD_ZIP_SIDE_1_SPARES_COUNT_OFFSET);
+                cl  = GET_BYTE_AT(  DiskStat, OLD_ZIP_PROTECT_MODE_OFFSET);
+                edx = GET_DWORD_AT( DiskStat, OLD_ZIP_LAST_LBA_OFFSET);
             }
             if(ebx == 0) {
                 goto NoSpares;
@@ -411,7 +429,7 @@ long GetSpareSectorCounts(bool) {
         }
 
         // MLT: The code for removing the ZIP protection has been omitted
-        return 0; // return zero since no error
+        return 0; // return zero since no erro
     }
     else {
         // trouble of some sort ... so suppress controls and
@@ -470,7 +488,7 @@ void SetCartridgeStatusToEAX(long eax) {
     CartridgeStatus = eax;
 
     // Set the text of the "action initiate button"
-    const char *esi;
+    const char *esi = 0;
     switch (CartridgeStatus) {
         case DISK_SPUN_DOWN:
             // set the button to "Start Disk Spinning"
@@ -516,6 +534,7 @@ void SetCartridgeStatusToEAX(long eax) {
             // The disk *IS* at speed so enable the action button!
             EnableTestBtn:
             EnableWindow(hTestButton, true);
+            esi = szPressToStart;
             break;
         default:
             // set the button to "One Moment Please"
@@ -613,8 +632,8 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
     SetErrorRecovery(false, false, true); // disable Retries & ECC
 
     Scsi[0] = XferCmd;
-    DWORD_AT(Scsi[2]) = MAKE_BIG_ENDIAN(FirstLBASector); // WHICH LBA's to read, BIG endian
-     WORD_AT(Scsi[7]) = MAKE_BIG_ENDIAN(NumberOfLBAs);   // HOW MANY to read, BIG endian
+    SET_DWORD_AT(Scsi, 2, MAKE_BIG_ENDIAN(FirstLBASector)); // WHICH LBA's to read, BIG endian
+    SET_WORD_AT (Scsi, 7, MAKE_BIG_ENDIAN(NumberOfLBAs));   // HOW MANY to read, BIG endian
     long eax = SCSICommand(CurrentDevice, Scsi, pBuffer, NumberOfLBAs * BYTES_PER_SECTOR);
     // if we failed somewhere during our transfer ... let's zero in on it
     if (eax) {
@@ -646,8 +665,8 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
 
             memset(Scsi, 0, sizeof(Scsi)); // clear out the SCSI CDB
             Scsi[0] = XferCmd;
-            DWORD_AT(Scsi[2]) = MAKE_BIG_ENDIAN(SingleTransferLBA); // WHICH LBA to read, BIG endian
-             WORD_AT(Scsi[7]) = MAKE_BIG_ENDIAN(1);                 // a single sector
+            SET_DWORD_AT(Scsi, 2, MAKE_BIG_ENDIAN(SingleTransferLBA)); // WHICH LBA to read, BIG endian
+            SET_WORD_AT (Scsi, 7, MAKE_BIG_ENDIAN(1));                 // a single sector
             eax = SCSICommand(CurrentDevice, Scsi, LocalBuffer, BYTES_PER_SECTOR);
 
             if (eax) {
@@ -767,7 +786,7 @@ long TestTheDisk() {
 
         // get a random pattern of data to write
         const long DataPattern = rand();
-        memset(pPatternBuffer, DataPattern, sizeof(pPatternBuffer));
+        memset(pPatternBuffer, DataPattern, MAX_SECTORS_PER_TEST * BYTES_PER_SECTOR);
 
         // update the cartridge's status
         GetSpareSectorCounts(false); // update the Cart's Condition
