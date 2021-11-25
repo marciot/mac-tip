@@ -7,6 +7,7 @@
 #include <Windows.h>
 #include <Quickdraw.h>
 
+#include "mac_vol.h"
 #include "tip.h"
 
 WindowPtr tipWindow;
@@ -23,6 +24,7 @@ void DoEvent(EventRecord &event, RgnHandle *cursorRgn);
 void DoUpdate(WindowPtr window);
 void DoMouseDown(EventRecord &event);
 void DoMouseMove(EventRecord &event, RgnHandle *cursorRegion);
+void DoDiskEvent(EventRecord &event);
 
 void run_tip(int id) {
     CurrentDevice = id;
@@ -52,8 +54,8 @@ void NewTipWindow() {
     AllowColor = theWorld.hasColorQD;
 
     Rect rect = qd.screenBits.bounds;
-    rect.left = 7;
-    rect.top  = 43;
+    rect.left = 8;
+    rect.top  = GetMBarHeight() + rect.left + 16;
     rect.bottom = rect.top + 336 - 35;
     rect.right = rect.left + 467;
 
@@ -105,7 +107,8 @@ void DoEvent(EventRecord &event, RgnHandle *cursorRgn) {
         switch(event.what) {
             case mouseDown: DoMouseDown(event); break;
             case updateEvt: DoUpdate((WindowPtr)event.message); break;
-            case osEvt: DoMouseMove(event, cursorRgn); break;
+            case diskEvt:   DoDiskEvent(event); break;
+            case osEvt:     DoMouseMove(event, cursorRgn); break;
         }
     }
 
@@ -178,6 +181,32 @@ void DoMouseMove(EventRecord &event, RgnHandle *cursorRgn) {
         // Set the cursorRegion to everything inside our window
         if(cursorRgn) {
             CopyRgn(((WindowPeek)tipWindow)->contRgn, *cursorRgn);
+        }
+    }
+}
+
+void DoDiskEvent(EventRecord &event) {
+    OSErr mountErr = HiWord(event.message);
+    short driveNum = LoWord(event.message);
+
+    if (mountErr == noErr) {
+        // Get the volume name of recently mounted drive
+        Str255 volumes;
+        mac_get_drive_volumes(driveNum, volumes);
+
+        // Ask the user whether they want to unmount the disk
+        ParamText(volumes, "\p", "\p", "\p");
+        if (CautionAlert(128, NULL) == 1) {
+            // The user wishes to unmount the disk
+            OSErr err = mac_unmount_drive(driveNum);
+            if(err != noErr) {
+                if(err == fBsyErr) {
+                    ParamText("\pFailed to unmount. One or more files are open.", "\p", "\p", "\p");
+                } else {
+                    ParamText("\pFailed to unmount.", "\p", "\p", "\p");
+                }
+                StopAlert(129, NULL);
+            }
         }
     }
 }
