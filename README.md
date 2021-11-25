@@ -59,17 +59,17 @@ Unmounting volumes using the Command Console
 --------------------------------------------
 
 **To avoid data corruption, you must "unmount" the cartridge prior to
-starting a test with TIP** 
+starting a test with TIP!** 
 
 There is no way to unmount a cartridge (without also ejecting it) in the
-Finder, but the program will start out with a Command Console that allows
-you to do this and other things.
+Finder, but the program provides a Command Console that allows you to do
+this and other things.
 
 <details>
 <summary>Click here to learn how to use the Command Console</summary></br>
 
-The Command Console is a unique feature of this port and is not present
-in the original TIP:
+The Command Console shows up when you first start the program. This is a
+unique feature of this port and is not present in the original TIP:
 
 ![Command Line][mac-screenshot2]
 
@@ -83,7 +83,7 @@ drive. To unmount a drive:
 * Type `unmount` followed by a volume's number to unmount it.
 
 *The unmount process will fail if you have any open files or applications in
-the volume. If this happens, close those files and try again.*
+the volume; if this happens, close those files and try again.*
 
 Once you have the cartridge unmounted, you will need to tell TIP which
 SCSI device to use:
@@ -91,9 +91,9 @@ SCSI device to use:
 * Type `list` to show a numbered list of all SCSI devices by SCSI ID.
 * Type `tip` followed by a SCSI ID to run TIP on that device.
 
-Future versions of this tool may eliminate these manual steps or the
-Command Console, if I can find the right way to do this in MacOS :grin:
-</summary></br>
+Future versions of this tool may eliminate the Command Console, if I can find
+the right way to automate all these steps in MacOS :grin:
+</details>
 
 About the code
 --------------
@@ -118,7 +118,7 @@ in the future.
 The Original TIP For Windows
 ----------------------------
 
-The source code in the "x86-asm-source" directory is the original Windows
+The source code in the `x86-asm-source` directory is the original Windows
 source code as graciously provided to me by Steve Gibson. I am republishing
 his code in this repository with his permission.
 
