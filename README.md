@@ -27,7 +27,6 @@ It has been tested in on the following environments:
 
 What will not work or is missing:
 
-* Support for JAZ drives is currently missing.
 * TIP will only do a read-pass and the write-tests have been disabled.
 * The functionality for operating with password or write protected disks is missing.
 * The partition recovery feature has been removed, since it is meant for PC disks.

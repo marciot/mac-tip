@@ -96,10 +96,10 @@ void scan_bus() {
          printf( "   %hd: (Not installed)\n", id );
       } else {
          printf( "   %hd: ", id );
-         printn( reply.prod, 16 );
-         printf( "    " );
          printn( reply.vend, 8 );
-         printf( "    " );
+         printf( ", " );
+         printn( reply.prod, 16 );
+         printf( ", " );
          printn( reply.rvsn, 4 );
          putchar( '\n' );
       }

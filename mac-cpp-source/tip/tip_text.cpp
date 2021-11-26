@@ -4,6 +4,10 @@ const char *szWindowTitle = "TIP 2.1b -- Zip & Jaz Drive and Cartridge Testing S
 const char *szCopyright_1 = "Copyright (c) 2006 by";
 const char *szCopyright_2 = "Gibson Research Corp.";
 
+const char *szIomega = "IOMEGA";
+const char *szZip = "ZIP";
+const char *szJaz = "JAZ";
+
 const char *szSide0 = "Side 0";
 const char *szSide1 = "Side 1";
 const char *szSpaceDashSpace = " - ";

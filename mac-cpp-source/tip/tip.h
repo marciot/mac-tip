@@ -11,6 +11,7 @@ void run_tip(int id);
 #define MAXIMUM_ZIP_SPARES 126
 
 extern long CurrentDevice;
+extern long DriveCount;
 extern long JazDrive; // true if the current drive
 extern long CartridgeStatus;
 extern long LastLBAOnCartridge;
@@ -117,6 +118,9 @@ enum {
 extern const char *szWindowTitle;
 extern const char *szCopyright_1;
 extern const char *szCopyright_2;
+extern const char *szIomega;
+extern const char *szZip;
+extern const char *szJaz;
 extern const char *szSide0;
 extern const char *szSide1;
 extern const char *szSpaceDashSpace;
@@ -202,6 +206,7 @@ void PreventProgramExit();
 void AllowProgramExit();
 void ErrorSound();
 void ProcessPendingMessages();
+void WinMain(int Device);
 void WndProc(long iMessage, long wParam);
 void TestMonitorWndProc();
 void ApplicationTimerProc();
@@ -209,6 +214,7 @@ void TestButtonClicked();
 
 void GetCommandDetails(char command, char &cmd_flags, char &cmd_length);
 long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen);
+void EnumerateIomegaDevices(long Device);
 long GetModePage(short Device, short PageToGet, void *pBuffer, short BufLen);
 long SetModePage(short Device, void *pBuffer);
 void ModifyModePage(char *PageBuff, char eec, char retries);

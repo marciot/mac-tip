@@ -48,7 +48,7 @@ OSErr scsi_cmd(int id, void *cmd, size_t clen, void *buff, size_t siz, size_t cn
    if (err != noErr) {printf("SCSIGet Error: %d\n", err); return err;}
 
    err = SCSISelect(id);
-   if (err != noErr) {printf("SCSISelect Error: %d\n", err); return err;}
+   if (err != noErr) {/*printf("SCSISelect Error: %d\n", err);*/ return err;}
 
    /* Send the command to the SCSI device and perform the requested I/O */
    err = SCSICmd( (Ptr) cmd, clen );

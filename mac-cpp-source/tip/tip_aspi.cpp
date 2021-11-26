@@ -10,6 +10,7 @@
 #define MAKE_LITTLE_ENDIAN(a) a // Don't do anything on 68000
 #define MAKE_BIG_ENDIAN(a)  a // Don't do anything on 68000
 
+// The following crashes on the 68000 due to unaligned access
 //#define BYTE_AT(s, a)  *((char*)(s + a))
 //#define WORD_AT(s, a)  *((short*)(s + a))
 //#define DWORD_AT(s, a) *((long*)(s + a))
@@ -101,6 +102,7 @@ enum {
 };
 
 long CurrentDevice = 0;
+long DriveCount = 0;
 
 long JazDrive = 0; // true if the current drive
 long CartridgeStatus = DISK_NOT_PRESENT;
@@ -214,6 +216,38 @@ long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen) {
 }
 
 /*******************************************************************************
+ * ENUMERATE IOMEGA DEVICES
+ *******************************************************************************/
+void EnumerateIomegaDevices(long Device) {
+    DriveCount = 0;
+    JazDrive = 0;
+    //-----------------------------------------------------------
+    char InqData[96];
+    char Scsi[6] = {0};
+    Scsi[0] = SCSI_Cmd_Inquiry;
+    Scsi[4] = sizeof(InqData);
+    long eax = SCSICommand(Device, Scsi, InqData, sizeof(InqData));
+    if(eax) goto TryNextDrive;
+    //-----------------------------------------------------------
+    InqData[14] = '\0';
+    if (strcmp(szIomega, InqData + 8)) goto TryNextDrive;
+    //-----------------------------------------------------------
+    InqData[19] = '\0';
+    if (!strcmp(szZip, InqData + 16)) goto FoundZipOrJaz;
+    //-----------------------------------------------------------
+    if (strcmp(szJaz, InqData + 16)) goto TryNextDrive;
+    JazDrive = 1;
+    FoundZipOrJaz:
+    DriveCount = 1;
+    if(JazDrive)
+        printf("Found Jaz drive\n");
+    else
+        printf("Found Zip drive\n");
+TryNextDrive:
+    return;
+}
+
+/*******************************************************************************
  * GET MODE PAGE
  *******************************************************************************/
 long GetModePage(short Device, short PageToGet, void *pBuffer, short BufLen) {
@@ -262,8 +296,8 @@ void SetErrorRecovery(bool Retries, bool ECC, bool Testing) {
     char PageBuff[40];
 
     #ifdef NO_EXCESS_READS
-        // Limit reads to 20 bytes to prevent controller errors
-        GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, 20);
+        // Limit reads to 20 bytes on Zip to prevent controller errors
+        GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, JazDrive ? sizeof(PageBuff) : 20);
     #else
         GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, sizeof(PageBuff));
     #endif
@@ -370,7 +404,7 @@ long GetSpareSectorCounts(char checkPassword) {
         // here... might be better to conditionally check for Jaz drive
         char DiskStat[72];
         #ifdef NO_EXCESS_READS
-            eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, 63);
+            eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, JazDrive ? sizeof(DiskStat) : 63);
             if (eax) return eax;
         #else
             eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
@@ -454,7 +488,7 @@ void HandleDriveChanging() {
     long eax;
     char DiskStat[72];
     #ifdef NO_EXCESS_READS
-        eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, 63);
+        eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, JazDrive ? sizeof(DiskStat) : 63);
         if (eax) return;
     #else
         eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));

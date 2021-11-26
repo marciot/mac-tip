@@ -20,10 +20,23 @@ Rect ES_Read = SET_RECT(346, 154, 409, 170);
 Rect SE_Rect = SET_RECT(222, 154, 255, 221);
 
 /*******************************************************************************
+ * WinMain
+ *
+ * Startup the Windows program.
+ *******************************************************************************/
+void WinMain(int Device) {
+    CurrentDevice = Device;
+    // test for an Iomega device
+    EnumerateIomegaDevices(CurrentDevice);
+    // now startup the timer for real-time features
+    StartApplicationTimer();
+}
+
+/*******************************************************************************
  * WndProc
  *
  * This is the system's main window procedure
- */
+ *******************************************************************************/
 void WndProc(long iMessage, long wParam) {
     // -------------------------------------------------------------------------
     // WM_PAINT
@@ -142,11 +155,11 @@ void PaintCartStatus() {
     }
     // pickup the pointer to the string
     const char *esi;
-    //if (DriveCount) {
-    esi = CartStatStrings[eax];
-    //} else {
-    //  esi = szNoIomegaDrives;
-    //}
+    if (DriveCount) {
+        esi = CartStatStrings[eax];
+    } else {
+        esi = szNoIomegaDrives;
+    }
     SetColor(BLACK_COLOR);
     TextOutCentered(115, 9, 241 - 115, 27 - 9, esi);
 }
@@ -347,7 +360,10 @@ void TestMonitorWndProc() {
  * APPLICATION TIMER PROC
  *******************************************************************************/
 void ApplicationTimerProc() {
-    HandleDriveChanging();
+    // only if we have at least ONE Iomega drive
+    if(DriveCount) {
+        HandleDriveChanging();
+    }
 }
 
 /*******************************************************************************

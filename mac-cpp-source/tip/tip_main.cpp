@@ -27,7 +27,7 @@ void DoMouseMove(EventRecord &event, RgnHandle *cursorRegion);
 void DoDiskEvent(EventRecord &event);
 
 void run_tip(int id) {
-    CurrentDevice = id;
+    WinMain(id);
     RgnHandle cursorRgn = NewRgn();
 
     NewTipWindow();
