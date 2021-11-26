@@ -37,6 +37,11 @@ extern long SingleTransferLBA;
 
 // ----------------------- Macintosh Compatibility -----------------------
 
+enum AlertTypes {
+    ERR_DLG,
+    YN_DLG
+};
+
 enum {
     BACK_COLOR   = -1,
     BLACK_COLOR  = 0x000000,
@@ -57,6 +62,8 @@ void SetColor(long color);
 void SetColor(long color, long monoColor);
 void DrawLed(int x, int y, long color);
 void StrToPascal(Str255 pStr, const char *str);
+int ShowAlert(AlertTypes type, const char* format, ...);
+void SetRichEditText(const char *name);
 long GetTextExtent(const char *str, unsigned long len);
 void TextOut(int x, int y, Str255 str);
 void TextOut(int x, int y, const char *str);
@@ -136,6 +143,25 @@ extern const char *szPressToStop;
 extern const char *szPressToSpin;
 extern const char *szPressToEject;
 extern const char *szPressToProceed;
+
+/************* Filenames *************/
+
+extern const char *szInstructions;
+extern const char *szNoASPI;
+extern const char *szASPITrouble;
+extern const char *szPPAVersion;
+extern const char *szDefectList;
+extern const char *szLocked;
+extern const char *szNoSpares;
+extern const char *szOutOfSpares;
+extern const char *szFewSpares;
+extern const char *szNotRunning;
+extern const char *szRunning;
+extern const char *szInterrupted;
+extern const char *szPerfectResult;
+extern const char *szExplainResult;
+extern const char *szBadResult;
+extern const char *szIomegaQuote;
 
 /************* Cartridge Status Text *************/
 
@@ -227,7 +253,8 @@ long GetSpareSectorCounts(char);
 void HandleDriveChanging();
 void SetCartridgeStatusToEAX(long eax);
 long PerformRegionTransfer(short XferCmd, void *pBuffer);
-long TestTheDisk();
+void TestTheDisk();
 long GetElapsedTimeInSeconds();
 void PrepareToBeginTesting();
 void BumpErrorCounts(long ErrorCode);
+void EjectIomegaCartridge();

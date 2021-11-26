@@ -85,10 +85,13 @@ void WndProc(long iMessage, long wParam) {
                     case DISK_Z_TRACK_FAILURE:
                     case DISK_TEST_FAILURE:
                     case DISK_PROTECTED:
-                        //EjectIomegaCartridge();
+                        EjectIomegaCartridge();
                         break;
                     case DISK_LOW_SPARES:
+                        SetRichEditText(szNotRunning);
+                        SetWindowText(hTestButton, szPressToStart);
                         PrepareToBeginTesting();
+                        InvalidateRect(hTestMonitor);
                         break;
                 }
                 break;

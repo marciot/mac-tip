@@ -92,15 +92,6 @@ struct DEFECT_LIST_HEADER {
 
 #define CHECK_CONDITION 0x02
 
-enum {
-    szBadResult,
-    szInterrupted,
-    szExplainResult,
-    szPerfectResult,
-    szNoSpares,
-    szOutOfSpares
-};
-
 long CurrentDevice = 0;
 long DriveCount = 0;
 
@@ -454,11 +445,12 @@ long GetSpareSectorCounts(char checkPassword) {
         if(!Side_0_SparesCount && !Side_1_SparesCount) {
             NoSpares:
             CartridgeStatus = DISK_TEST_FAILURE;
-            eax = szNoSpares;
+            const char *eax = szNoSpares;
             // if were running give them a different error message
             if(TestingPhase) {
                 eax = szOutOfSpares;
             }
+            SetRichEditText(eax);
             goto ErrorExit;
         }
 
@@ -470,6 +462,7 @@ long GetSpareSectorCounts(char checkPassword) {
         // show the richedit control for the trouble
         if (eax == DEFECT_LIST_READ_ERROR) {
             CartridgeStatus = DISK_Z_TRACK_FAILURE;
+            SetRichEditText(szDefectList);
             ErrorExit:
             return -1;
         }
@@ -533,6 +526,7 @@ void SetCartridgeStatusToEAX(long eax) {
             esi = szPressToStop;
             break;
         case DISK_NOT_PRESENT:
+            SetRichEditText(szNotRunning);
             goto DisableActions;
         case DISK_AT_SPEED:
             eax = GetSpareSectorCounts(true); // update the Cart Condition
@@ -556,6 +550,7 @@ void SetCartridgeStatusToEAX(long eax) {
                     }
                     if(Side_1_SparesCount < MINIMUM_ZIP_SPARES) {
                     InsufficientSpares:
+                        SetRichEditText(szFewSpares);
                         CartridgeStatus = DISK_LOW_SPARES;
                         esi = szPressToProceed;
                         goto EnableTestBtn;
@@ -654,6 +649,23 @@ void BumpErrorCounts(long ErrorCode) {
         SoftErrors++;
     else
         HardErrors++;
+}
+
+/*******************************************************************************
+ * EJECT IOMEGA CARTRIDGE
+ *******************************************************************************/
+void EjectIomegaCartridge() {
+    // Could NOT do it through the IOCTL layer ... so eject with SCSI
+    // make sure the media is not locked...
+    char Scsi[6] = {0};
+    Scsi[0] = SCSI_Cmd_PreventAllow;
+    SCSICommand(CurrentDevice, Scsi, 0, 0);
+    // issue an Asynchronous STOP command to induce spindown and ejection
+    memset(Scsi, 0, sizeof(Scsi));
+    Scsi[0] = SCSI_Cmd_StartStopUnit;
+    Scsi[1] = 1; // Set the IMMED bit for offline
+    Scsi[4] = 2; // eject a Jaz disk after stopping
+    SCSICommand(CurrentDevice, Scsi, 0, 0);
 }
 
 /*******************************************************************************
@@ -775,18 +787,19 @@ Exit:
  * TEST THE DISK
  *******************************************************************************/
 
-long TestTheDisk() {
+void TestTheDisk() {
     void *pPatternBuffer  = malloc(MAX_SECTORS_PER_TEST * BYTES_PER_SECTOR);
     void *pUserDataBuffer = malloc(MAX_SECTORS_PER_TEST * BYTES_PER_SECTOR);
 
     if(pPatternBuffer == NULL || pUserDataBuffer == NULL) {
         printf("Allocation error\n");
-        return -1;
+        return;
     }
 
     StopApplicationTimer();
 
     PreventProgramExit();
+    SetRichEditText(szRunning);
     CartridgeStatus = DISK_TEST_UNDERWAY;
     TestingPhase = TESTING_STARTUP; // inhibit stopping now
     SetWindowText(hTestButton, szPressToStop);
@@ -869,7 +882,8 @@ GetOut:
     AllowProgramExit();
 
     // compute the number of serious troubles
-    long eax, errors = FirmErrors + HardErrors;
+    const char *eax;
+    long errors = FirmErrors + HardErrors;
     if (errors >= BADNESS_THRESHOLD) {
         eax = szBadResult;
     }
@@ -885,8 +899,8 @@ GetOut:
             eax = szPerfectResult;
         }
     }
-
+    SetRichEditText(eax);
     InvalidateRect(hTestMonitor);
+    Exit:
     StartApplicationTimer();
-    return eax;
 }

@@ -47,6 +47,7 @@ bool process_command() {
     printf("\n");
 
     char *arg_str = strchr(cmd, ' ');
+    while(*arg_str == ' ') arg_str++;
     if(arg_str) arg_val = atoi(arg_str);
 
     switch( tolower(cmd[0]) ) {
@@ -60,6 +61,7 @@ bool process_command() {
         case 'u': mac_unmount(arg_val); break;
         case 't': run_tip(arg_val); break;
         case 'q': return false;
+        case 'o': SetRichEditText(arg_str); break;
     }
     return true;
 }

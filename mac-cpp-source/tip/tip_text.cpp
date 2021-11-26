@@ -26,6 +26,25 @@ const char *szPressToSpin = "Press to Spin Up";
 const char *szPressToEject = "Press to Eject";
 const char *szPressToProceed = "Press to Proceed";
 
+// Filenames
+
+const char *szInstructions = "Instructions";
+const char *szNoASPI = "No ASPI";
+const char *szASPITrouble = "No Drives";
+const char *szPPAVersion = "Parallel Port";
+const char *szDefectList = "Z-Track Failure";
+const char *szLocked = "Cartridge Locked";
+const char *szNoSpares = "No Spares";
+const char *szOutOfSpares = "Out of Spares";
+const char *szFewSpares = "Few Spares";
+const char *szNotRunning = "Not Running";
+const char *szRunning = "Test Running";
+const char *szInterrupted = "Test Interrupted";
+const char *szPerfectResult = "Perfect Result";
+const char *szExplainResult = "Good Result";
+const char *szBadResult = "Bad Result";
+const char *szIomegaQuote = "Iomega Quote";
+
 /************* Cartridge Status Text *************/
 
 const char *szUnknownStat    = "Ejecting Cartridge";

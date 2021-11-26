@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
 #include <SIOUX.h>
@@ -7,6 +8,8 @@
 #include <Windows.h>
 #include <Quickdraw.h>
 
+#include "pstring.h"
+#include "LaunchLib.h"
 #include "mac_vol.h"
 #include "tip.h"
 
@@ -30,7 +33,10 @@ void run_tip(int id) {
     WinMain(id);
     RgnHandle cursorRgn = NewRgn();
 
+    SetRichEditText(szInstructions);
     NewTipWindow();
+    EnableWindow(hTestButton, false);
+
     gDone = false;
     do {
         EventRecord event;
@@ -195,17 +201,15 @@ void DoDiskEvent(EventRecord &event) {
         mac_get_drive_volumes(driveNum, volumes);
 
         // Ask the user whether they want to unmount the disk
-        ParamText(volumes, "\p", "\p", "\p");
         if (CautionAlert(128, NULL) == 1) {
             // The user wishes to unmount the disk
             OSErr err = mac_unmount_drive(driveNum);
             if(err != noErr) {
                 if(err == fBsyErr) {
-                    ParamText("\pFailed to unmount. One or more files are open.", "\p", "\p", "\p");
+                    ShowAlert(ERR_DLG, "Failed to unmount. One or more files are open.");
                 } else {
-                    ParamText("\pFailed to unmount.", "\p", "\p", "\p");
+                    ShowAlert(ERR_DLG, "Failed to unmount. Error Code: %d", err);
                 }
-                StopAlert(129, NULL);
             }
         }
     }
@@ -215,6 +219,69 @@ void StrToPascal(Str255 pStr, const char *str) {
     size_t len = strlen(str);
     pStr[0] = (len > 255) ? 255 : len;
     strncpy((char*)pStr + 1, str, 255);
+}
+
+/*******************************************************************************
+ * SHOW ALERT BOX
+ *******************************************************************************/
+
+int ShowAlert(AlertTypes type, const char* format, ...) {
+    Str255 pStr;
+    va_list argptr;
+    va_start(argptr, format);
+    vsprintf((char*)pStr + 1, format, argptr);
+    va_end(argptr);
+    pStr[0] = strlen((char*)pStr + 1);
+    ParamText(pStr, "\p", "\p", "\p");
+    switch(type) {
+        case ERR_DLG: return StopAlert(129, NULL);
+        case YN_DLG: return NoteAlert(130, NULL);
+    }
+    return 0;
+}
+
+/*******************************************************************************
+ * SET RICH EDIT TEXT
+ *
+ * This routine will open one of the TIP explanation files using SimpleText
+ *
+ * This uses code from Thomas Tempelmann's C libraries
+ *
+ * http://www.tempel.org/macdev/index.html
+ *******************************************************************************/
+
+void SetRichEditText(const char *name) {
+    static const char *lastName = 0;
+    if(name == lastName) return;
+
+    if(ShowAlert(YN_DLG, "Would you like to read the document \"%s\" now?", name) == 2) {
+        return;
+    }
+    Str255 docName;
+    StrToPascal(docName, name);
+
+    Str255 pathName;
+    pstrcpy(pathName, "\p:tip-doc:");
+    pstrcat(pathName, docName);
+
+    FSSpec docSpec;
+    FSSpec appSpec;
+    OSErr err = FSMakeFSSpec(0, 0, pathName, &docSpec);
+    if(err) {
+        ShowAlert(ERR_DLG, "Can't find the \"%s\" file. Make sure it is inside the \"tip-doc\" folder.", name);
+        return;
+    }
+
+    err = FindApplicationFromDocument(&docSpec, &appSpec);
+    if(err) {
+        ShowAlert(ERR_DLG, "Can't find an application to open \"%s\". Is \"SimpleText\" installed?", name);
+        return;
+    }
+    err = LaunchApplicationWithDocument(&appSpec, &docSpec, false);
+    if(err) {
+        ShowAlert(ERR_DLG, "Can't open \"%s\". If \"%#s\" is already running, please close it.", name, appSpec.name);
+        return;
+    }
 }
 
 /*******************************************************************************
