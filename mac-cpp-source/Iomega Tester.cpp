@@ -21,11 +21,10 @@ void main() {
     SIOUXSettings.asktosaveonclose = FALSE;
     SIOUXSettings.standalone = FALSE;
 
-    printf( "SCSI and Iomega Zip/Jaz Toolkit V0.1\n" );
-    printf( "(c) 2021 Marcio Teixeira\n\n" );
-    printf( "TIP based on source code provided by Steve Gibson (http://grc.com)\n" );
+    printf( "This Mac port (c) 2021 Marcio Teixeira       http://github.com/marciot/mac-tip\n" );
+    printf( "Based on code (c) 2006 Gibson Research Corp  http://grc.com/tip/clickdeath.htm\n" );
 
-    SIOUXSetTitle("\pCommand Console");
+    SIOUXSetTitle("\pIomega Tester (Beta) V0.1");
 
     print_help();
 
@@ -42,7 +41,7 @@ void main() {
 bool process_command() {
     short int arg_val = 0;
     char cmd[80];
-    printf( "\n> " );
+    printf( "\nCmd> " );
     gets( cmd );
     printf("\n");
 
@@ -62,6 +61,7 @@ bool process_command() {
         case 't': run_tip(arg_val); break;
         case 'q': return false;
         case 'o': SetRichEditText(arg_str); break;
+        default: printf("Unknown command, type 'h' for help\n");
     }
     return true;
 }

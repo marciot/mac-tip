@@ -748,8 +748,6 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
                 BumpErrorCounts(eax); // given eax, count the errors
                 GetSpareSectorCounts(false); // update the Cart's Condition
                 UpdateRunTimeDisplay();
-
-                if(UserInterrupt) break;
             }
             LocalBuffer += BYTES_PER_SECTOR;
             SingleTransferLBA++;
@@ -844,7 +842,7 @@ void TestTheDisk() {
 
         long eax = PerformRegionTransfer(SCSI_Cmd_ReadMany, pUserDataBuffer);
 
-        /*if(eax == 0) {
+        if(eax == 0) {
             // -------------------------------
             TestingPhase = WRITING_PATT;
             UpdateRunPhaseDisplay();
@@ -864,7 +862,7 @@ void TestTheDisk() {
         }
         if (CartridgeStatus != DISK_TEST_UNDERWAY) {
             break;
-        }*/
+        }
         // bump the FirstLBASector up for the next transfer
         FirstLBASector += NumberOfLBAs;
     } while(!UserInterrupt);
