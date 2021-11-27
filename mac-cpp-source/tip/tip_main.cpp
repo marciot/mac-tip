@@ -201,6 +201,7 @@ void DoDiskEvent(EventRecord &event) {
         mac_get_drive_volumes(driveNum, volumes);
 
         // Ask the user whether they want to unmount the disk
+        ParamText(volumes, "\p", "\p", "\p");
         if (CautionAlert(128, NULL) == 1) {
             // The user wishes to unmount the disk
             OSErr err = mac_unmount_drive(driveNum);
@@ -253,6 +254,7 @@ int ShowAlert(AlertTypes type, const char* format, ...) {
 void SetRichEditText(const char *name) {
     static const char *lastName = 0;
     if(name == lastName) return;
+    lastName = name;
 
     if(ShowAlert(YN_DLG, "Would you like to read the document \"%s\" now?", name) == 2) {
         return;

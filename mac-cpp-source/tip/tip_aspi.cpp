@@ -526,7 +526,7 @@ void SetCartridgeStatusToEAX(long eax) {
             esi = szPressToStop;
             break;
         case DISK_NOT_PRESENT:
-            SetRichEditText(szNotRunning);
+            //SetRichEditText(szNotRunning);
             goto DisableActions;
         case DISK_AT_SPEED:
             eax = GetSpareSectorCounts(true); // update the Cart Condition
@@ -683,8 +683,6 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
     long eax = SCSICommand(CurrentDevice, Scsi, pBuffer, NumberOfLBAs * BYTES_PER_SECTOR);
     // if we failed somewhere during our transfer ... let's zero in on it
     if (eax) {
-        printf("Error during transfer %lx (lba: %ld)\n", eax, FirstLBASector);
-
         if ( eax == SS_ERR || // if it's a CONTROLLER ERROR, skip!
              eax == BUFFER_TOO_BIG ||
              eax == LBA_TOO_LARGE) {
@@ -797,7 +795,7 @@ void TestTheDisk() {
     StopApplicationTimer();
 
     PreventProgramExit();
-    SetRichEditText(szRunning);
+    //SetRichEditText(szRunning);
     CartridgeStatus = DISK_TEST_UNDERWAY;
     TestingPhase = TESTING_STARTUP; // inhibit stopping now
     SetWindowText(hTestButton, szPressToStop);
@@ -854,7 +852,7 @@ void TestTheDisk() {
             // -------------------------------
             TestingPhase = WRITING_DATA;
             UpdateRunPhaseDisplay();
-            PerformRegionTransfer(SCSI_Cmd_Verify, pUserDataBuffer);
+            PerformRegionTransfer(SCSI_Cmd_WriteMany, pUserDataBuffer);
         }
         else if (eax == LBA_TOO_LARGE) {
             // if we hit the end of the disk ... exit gracefully!

@@ -10,6 +10,7 @@
 #include "iomega_cmds.h"
 
 bool process_command();
+void confirm_run_tip(int id);
 void printn( unsigned char *c, int n );
 void print_help();
 void scan_bus();
@@ -24,7 +25,7 @@ void main() {
     printf( "This Mac port (c) 2021 Marcio Teixeira       http://github.com/marciot/mac-tip\n" );
     printf( "Based on code (c) 2006 Gibson Research Corp  http://grc.com/tip/clickdeath.htm\n" );
 
-    SIOUXSetTitle("\pIomega Tester (Beta) V0.1");
+    SIOUXSetTitle("\pIomega Tester Beta (" __DATE__ ")");
 
     print_help();
 
@@ -58,12 +59,21 @@ bool process_command() {
         case 'i': dev_info(arg_val); break;
         case 'v': mac_list_volumes(); break;
         case 'u': mac_unmount(arg_val); break;
-        case 't': run_tip(arg_val); break;
+        case 't': confirm_run_tip(arg_val); break;
         case 'q': return false;
         case 'o': SetRichEditText(arg_str); break;
         default: printf("Unknown command, type 'h' for help\n");
     }
     return true;
+}
+
+void confirm_run_tip(int id) {
+    char cmd[80];
+    printf("\nThis program is in BETA TESTING and may cause severe data loss!\n\nProceed [Y/N]? ");
+    gets( cmd );
+    if(tolower(cmd[0]) == 'y') {
+        run_tip(id);
+    }
 }
 
 void print_help() {

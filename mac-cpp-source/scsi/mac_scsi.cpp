@@ -53,7 +53,7 @@ OSErr scsi_cmd(int id, void *cmd, size_t clen, void *buff, size_t siz, size_t cn
    /* Send the command to the SCSI device and perform the requested I/O */
    err = SCSICmd( (Ptr) cmd, clen );
    if (err == noErr) {
-      OSErr io_err;
+      OSErr io_err = noErr;
       switch(flags) {
          case SCSI_WRITE | SCSI_BLIND: io_err = SCSIWBlind( (Ptr) TIB ); break;
          case SCSI_READ  | SCSI_BLIND: io_err = SCSIRBlind( (Ptr) TIB ); break;
