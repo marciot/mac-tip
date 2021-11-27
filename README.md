@@ -135,6 +135,14 @@ in the future.
 
 </details>
 
+Credits
+-------
+
+* A big thanks goes to Steve Gibson for the source code that made this possible!
+* Thank you to [Stone Table Software] for providing the tool I used to convert the Windows RTF docs into SimpleText...
+* ...and to the Internet Archive's Wayback Machine for allowing me to access it long after the website was shut down!
+* Thank you to Thomas Tempelmann sharing his [LaunchLib code] which I used to open the documents
+
 The Original TIP For Windows
 ----------------------------
 
@@ -165,4 +173,5 @@ his code in this repository with his permission.
 [Macintosh SCSI Manager]: https://developer.apple.com/legacy/library/documentation/mac/pdf/Devices/Scsi_Manager.pdf
 [explanation document]: https://github.com/marciot/mac-tip/raw/main/x86-asm-source/RTF.RTF
 [beta testing in the discussion forum]: https://github.com/marciot/mac-tip/discussions/1
-
+[LaunchLib code]: http://www.tempel.org/macdev/index.html#Libs
+[Stone Table Software]: https://web.archive.org/web/20010308062807/http://www.stonetablesoftware.com/rtf2text.html
