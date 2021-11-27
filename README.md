@@ -67,15 +67,17 @@ I am open to paid consulting work related to retro-computing or software
 for vintage Macs. If you have a project in mind, please hit me up via my
 [GitHub account]!
 
-Unmounting volumes using the Command Console
---------------------------------------------
+Unmounting volumes
+------------------
 
 **To avoid data corruption, you must "unmount" the cartridge prior to
 starting a test with TIP!** 
 
 There is no way to unmount a cartridge (without also ejecting it) in the
-Finder, but the program provides a Command Console that allows you to do
-this and other things.
+Finder, but you can either:
+
+1) Start TIP without a disk in the drive. TIP will recognize when Mac OS mounts newly inserted cartridges and will give you the choice to unmount it.
+2) Use the command console to unmount a disk **prior to** starting TIP
 
 <details>
 <summary>Click here to learn how to use the Command Console</summary></br>
@@ -85,11 +87,12 @@ unique feature of this port and is not present in the original TIP:
 
 ![Command Line][mac-screenshot2]
 
-Start by inserting the disk you want to test. The disk will show up in the
-Finder as an icon; MacOS calls this a "volume". To prevent data corruption,
-you have to "unmount" the volume prior to testing. When a volume is unmounted,
-the icon will disappear from the Finder, but the cartridge will remain in the
-drive. To unmount a drive:
+### Unmounting Volumes
+
+A cartridge will show up in the Finder as an icon; MacOS calls this a "volume".
+To prevent data corruption, you have to "unmount" the volume prior to testing.
+When a volume is unmounted, the icon will disappear from the Finder, but the
+cartridge will remain in the drive. To unmount a drive:
 
 * Type `volumes` to show a numbered list of all Mac volumes
 * Type `unmount` followed by a volume's number to unmount it.
@@ -97,8 +100,9 @@ drive. To unmount a drive:
 *The unmount process will fail if you have any open files or applications in
 the volume; if this happens, close those files and try again.*
 
-Once you have the cartridge unmounted, you will need to tell TIP which
-SCSI device to use:
+### Starting TIP
+
+To start TIP, you will need to tell it which SCSI device to use:
 
 * Type `list` to show a numbered list of all SCSI devices by SCSI ID.
 * Type `tip` followed by a SCSI ID to run TIP on that device.
