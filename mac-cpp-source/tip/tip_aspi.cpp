@@ -514,12 +514,19 @@ void SetCartridgeStatusToEAX(long eax) {
     long PriorStatus = CartridgeStatus;
     CartridgeStatus = eax;
 
+    if (!DriveCount) {
+        // MLT: Added this check.
+        SetRichEditText(szASPITrouble);
+        goto DisableActions;
+    }
+
     // Set the text of the "action initiate button"
     const char *esi = 0;
     switch (CartridgeStatus) {
         case DISK_SPUN_DOWN:
             // set the button to "Start Disk Spinning"
             esi = szPressToSpin;
+            EnableWindow(hTestButton, true);
             break;
         case DISK_TEST_UNDERWAY:
             // set the button to "Stop Testing"

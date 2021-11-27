@@ -74,6 +74,7 @@ void confirm_run_tip(int id) {
     if(tolower(cmd[0]) == 'y') {
         run_tip(id);
     }
+    printf("\n\nYou may need to REBOOT your Mac before cartridges are recognized by Mac OS.");
 }
 
 void print_help() {
