@@ -27,10 +27,8 @@ It has been tested in on the following environments:
 
 What will not work or is missing:
 
-* TIP will only do a read-pass and the write-tests have been disabled.
 * The functionality for operating with password or write protected disks is missing.
 * The partition recovery feature has been removed, since it is meant for PC disks.
-* The detailed post-test explanation screens are absent. For now, I refer you to the [explanation document] from the assembly source archive. That document is broken up into parts indicated by words in square brackets.
 
 </details>
 
@@ -46,9 +44,12 @@ port.**
 Where are the binaries?
 -----------------------
 
-Right now the port is in early testing, so I am not releasing any
-compiled binaries. There is always a risk of data loss with a tool like
-this, so please post in the discussion forum if you want to beta test.
+Once they are ready, compiled binaries will be made available on the
+releases page for people who have signed up for
+[beta testing in the discussion forum]
+
+There is always a risk of data loss with a tool like this, so please
+use it only on non-critical data if you decide to beta test.
 
 How can you help?
 -----------------
@@ -56,7 +57,7 @@ How can you help?
 You can help this project in one of the following ways:
 
 * Star this project on GitHub to show your support!
-* Sign up to [beta test in the discussion forum](https://github.com/marciot/mac-tip/discussions/1#discussion-3704575)!
+* Sign up to [beta testing in the discussion forum]!
 * Donate a 1 or 2GB Jaz cartridge for testing (I have a 2GB SCSI Jaz drive, but no cartridges!).
 * Become a GitHub sponsor to help fund my work with this and other open-source projects!
 
@@ -163,3 +164,5 @@ his code in this repository with his permission.
 [Metrowerks CodeWarrior 8 Gold]: https://www.macintoshrepository.org/11910-codewarrior-8-gold
 [Macintosh SCSI Manager]: https://developer.apple.com/legacy/library/documentation/mac/pdf/Devices/Scsi_Manager.pdf
 [explanation document]: https://github.com/marciot/mac-tip/raw/main/x86-asm-source/RTF.RTF
+[beta testing in the discussion forum]: https://github.com/marciot/mac-tip/discussions/1
+
