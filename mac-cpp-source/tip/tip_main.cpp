@@ -512,4 +512,5 @@ void ProcessPendingMessages() {
     if (GetNextEvent(everyEvent, &event)) {
         DoEvent(event,NULL);
     }
+    SystemTask();
 }

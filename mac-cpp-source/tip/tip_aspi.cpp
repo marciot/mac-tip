@@ -514,11 +514,22 @@ void SetCartridgeStatusToEAX(long eax) {
     long PriorStatus = CartridgeStatus;
     CartridgeStatus = eax;
 
+    /**************************************************************************
+     * Added by MLT
+     */
+    // Avoid flickering
+    static long LastCartridgeStatus = -1;
+    if (LastCartridgeStatus == CartridgeStatus) {
+        return;
+    }
+    LastCartridgeStatus = CartridgeStatus;
+     // Disable testing button when no drives present
     if (!DriveCount) {
         // MLT: Added this check.
         SetRichEditText(szASPITrouble);
         goto DisableActions;
     }
+    /**************************************************************************/
 
     // Set the text of the "action initiate button"
     const char *esi = 0;
