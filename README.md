@@ -20,11 +20,12 @@ Power Macintosh G3, released in 1997.
 
 It has been tested in on the following environments:
 
-| Computer           | Memory | System | Drive        |
-|------------------- |--------|--------|--------------|
-| Macintosh Plus     | 4MB    | 7.0.1  | Zip Plus 100 |
-| PowerBook 3400c    | 144MB  | 8.6    | Zip 100      |
-| Power Macintosh G3 |   ?    | 9.2.1  | Zip 100      |
+| Computer           | Memory | System | Drive              |
+|------------------- |--------|--------|--------------------|
+| Macintosh Plus     | 4MB    | 7.0.1  | Zip Plus 100 SCSI  |
+| PowerBook 3400c    | 144MB  | 8.6    | Zip 100 SCSI       |
+| Power Macintosh G3 | 256MB  | 9.2.1  | Zip 100 SCSI       |
+| Power Macintosh G3 | 256MB  | 9.2.1  | Zip 100 Int. ATAPI |
 
 What will not work or is missing:
 
