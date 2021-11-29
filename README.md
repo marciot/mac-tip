@@ -29,6 +29,7 @@ It has been tested in on the following environments:
 
 What will not work or is missing:
 
+* USB connected Zip drives have been reported to not work.
 * The functionality for operating with password or write protected disks is missing.
 * The partition recovery feature has been removed, since it is meant for PC disks.
 
