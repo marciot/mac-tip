@@ -20,13 +20,16 @@ Power Macintosh G3, released in 1997.
 
 It has been tested in on the following environments:
 
-| Computer        | Memory | System | Drive        |
-|-----------------|--------|--------|--------------|
-| Macintosh Plus  | 4MB    | 7.0.1  | Zip Plus 100 |
-| PowerBook 3400c | 144MB  | 8.6    | Zip 100      |
+| Computer           | Memory | System | Drive                   | Firmware |
+|------------------- |--------|--------|-------------------------|----------|
+| Macintosh Plus     | 4MB    | 7.0.1  | Zip Plus 100 Ext. SCSI  | J.66     |
+| PowerBook 3400c    | 144MB  | 8.6    | Zip 100 Ext. SCSI       | E.08     |
+| Power Macintosh G3 | 256MB  | 9.2.1  | Zip 100 Ext. SCSI       | C.22     |
+| Power Macintosh G3 | 256MB  | 9.2.1  | Zip 100 Int. SCSI       | J.03     |
 
 What will not work or is missing:
 
+* USB connected Zip drives have been reported to not work.
 * The functionality for operating with password or write protected disks is missing.
 * The partition recovery feature has been removed, since it is meant for PC disks.
 
@@ -135,6 +138,14 @@ in the future.
 
 </details>
 
+Credits
+-------
+
+* A big thanks goes to Steve Gibson for the source code that made this possible!
+* Thank you to [Stone Table Software] for providing the tool I used to convert the Windows RTF docs into SimpleText...
+* ...and to the Internet Archive's Wayback Machine for allowing me to access it long after the website was shut down!
+* Thank you to Thomas Tempelmann sharing his [LaunchLib code] which I used to open the documents
+
 The Original TIP For Windows
 ----------------------------
 
@@ -165,4 +176,5 @@ his code in this repository with his permission.
 [Macintosh SCSI Manager]: https://developer.apple.com/legacy/library/documentation/mac/pdf/Devices/Scsi_Manager.pdf
 [explanation document]: https://github.com/marciot/mac-tip/raw/main/x86-asm-source/RTF.RTF
 [beta testing in the discussion forum]: https://github.com/marciot/mac-tip/discussions/1
-
+[LaunchLib code]: http://www.tempel.org/macdev/index.html#Libs
+[Stone Table Software]: https://web.archive.org/web/20010308062807/http://www.stonetablesoftware.com/rtf2text.html
