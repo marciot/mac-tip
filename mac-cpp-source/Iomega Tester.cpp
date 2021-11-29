@@ -27,6 +27,7 @@ void main() {
 
     SIOUXSetTitle("\pIomega Tester Beta (" __DATE__ ")");
 
+
     print_help();
 
     do {

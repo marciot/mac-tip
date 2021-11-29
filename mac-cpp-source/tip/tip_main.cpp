@@ -11,44 +11,63 @@
 #include "pstring.h"
 #include "LaunchLib.h"
 #include "mac_vol.h"
+#include "text_box.h"
 #include "tip.h"
 
-WindowPtr tipWindow;
+enum TipPage {
+    kTestingPage,
+    kExplainPage,
+} page;
 
-static int gDone;
-static bool AllowColor;
-static bool timerEnabled = true;
-static ControlHandle testBtn = 0;
-static ControlHandle exitBtn = 0;
+static int           gDone;
+static bool          allowColor;
+static bool          inited = false;
+static bool          timerEnabled = false;
+static WindowPtr     tipWindow;
+static TBHandle      richText;
+static const char   *textFileName;
 
 void NewTipWindow();
-void DestroyTipWindow();
+void DisposeTipWindow();
 void DoEvent(EventRecord &event, RgnHandle *cursorRgn);
 void DoUpdate(WindowPtr window);
 void DoMouseDown(EventRecord &event);
 void DoMouseMove(EventRecord &event, RgnHandle *cursorRegion);
 void DoDiskEvent(EventRecord &event);
+void SetPage(TipPage page);
+ControlHandle FindControl(int id);
+OSErr GetExplanationFSSpec(const char *name, FSSpec *docSpec);
+void OpenExplanationInSimpleText();
+
+#define SET_POINT(x,y) {y,x};
+
+const Point mainWndOrigin = SET_POINT(0, 40);
 
 void run_tip(int id) {
-    WinMain(id);
     RgnHandle cursorRgn = NewRgn();
 
-    SetRichEditText(szInstructions);
     NewTipWindow();
     EnableWindow(hTestButton, false);
+    SetRichEditText(szInstructions);
 
     gDone = false;
     do {
         EventRecord event;
         if (WaitNextEvent(everyEvent, &event, GetCaretTime(), cursorRgn)) {
             DoEvent(event, &cursorRgn);
+            if(!inited && page == kTestingPage) {
+                printf("Starting tip\n");
+                // Start TIP as soon as the user dismisses the intro screen
+                inited = true;
+                WinMain(id);
+            }
         }
         if(timerEnabled) {
             ApplicationTimerProc();
         }
     } while (!gDone);
 
-    DestroyTipWindow();
+    DisposeTipWindow();
     DisposeRgn(cursorRgn);
 }
 
@@ -57,54 +76,81 @@ void NewTipWindow() {
     SysEnvRec   theWorld;
 
     error = SysEnvirons(1, &theWorld);
-    AllowColor = theWorld.hasColorQD;
+    allowColor = theWorld.hasColorQD;
+
+    const int wndHeight = 336 - 35;
+    const int wndWidth  = 467;
 
     Rect rect = qd.screenBits.bounds;
     rect.left = 8;
     rect.top  = GetMBarHeight() + rect.left + 16;
-    rect.bottom = rect.top + 336 - 35;
-    rect.right = rect.left + 467;
+    rect.bottom = rect.top + wndHeight;
+    rect.right  = rect.left + wndWidth;
 
     Str255 title;
     StrToPascal(title, szWindowTitle);
-    tipWindow = AllowColor ?
+    tipWindow = allowColor ?
         NewCWindow(NULL,&rect, title, true, 0, (WindowPtr)-1, true, 0) :
         NewWindow(NULL,&rect,  title, true, 0, (WindowPtr)-1, true, 0);
 
     GetDC(hMainWnd);
 
-    if (AllowColor) {
-        SetColor(BACK_COLOR);
-        RGBColor bgColor;
-        GetForeColor(&bgColor);
-        RGBBackColor(&bgColor);
-    }
     TextSize(10);
 
+    // Create the controls
+
     for(int i = 0; tipBtns[i].name; i++) {
-        if (!tipBtns[i].visible) continue;
         SetRect(&rect,
             tipBtns[i].x,
-            tipBtns[i].y,
+            tipBtns[i].y - mainWndOrigin.v,
             tipBtns[i].x + tipBtns[i].w,
-            tipBtns[i].y + tipBtns[i].h
+            tipBtns[i].y + tipBtns[i].h - mainWndOrigin.v
         );
-
         StrToPascal(title, tipBtns[i].name);
-        ControlHandle h = NewControl(tipWindow, &rect, title, true, 0, 0, 0, 0, tipBtns[i].id);
-        if(tipBtns[i].id == IDB_TEST) {
-            testBtn = h;
-        }
-        if(tipBtns[i].id == IDB_QUIT) {
-            exitBtn = h;
-        }
+        tipBtns[i].hndl = NewControl(tipWindow, &rect, title, true, 0, 0, 0, 0, tipBtns[i].id);
     }
-
     ReleaseDC(hMainWnd);
+
+    page = kExplainPage;
+    GetDC(hExplainWnd);
+
+    // Create the text edit widget
+    SetRect(&rect, 15, 15, 447, 250);
+    richText = TBNew(tipWindow, &rect);
+
+    ReleaseDC(hExplainWnd);
+
+    SetPage(kTestingPage);
 }
 
-void DestroyTipWindow() {
+void DisposeTipWindow() {
+    TBDispose(richText);
     DisposeWindow(tipWindow);
+}
+
+ControlHandle FindControl(int id) {
+    for(int i = 0; tipBtns[i].name; i++) {
+        if (tipBtns[i].id == id)
+            return tipBtns[i].hndl;
+    }
+    return 0;
+}
+
+bool PrepareDC(int which) {
+    SetPort(tipWindow);
+    switch(which) {
+        case hExplainWnd:
+            if(page != kExplainPage) return false;
+            break;
+        case hTestMonitor:
+            if(page != kTestingPage) return false;
+            SetOrigin(-20, -10);
+            break;
+        case hMainWnd:
+            SetOrigin(mainWndOrigin.h,  mainWndOrigin.v);
+            break;
+    }
+    return true;
 }
 
 void DoEvent(EventRecord &event, RgnHandle *cursorRgn) {
@@ -117,22 +163,30 @@ void DoEvent(EventRecord &event, RgnHandle *cursorRgn) {
             case osEvt:     DoMouseMove(event, cursorRgn); break;
         }
     }
-
 }
 
 void DoUpdate(WindowPtr window) {
     BeginUpdate(window);
     SetPort(window);
-    EraseRect(&window->portRect);
+    SetColor(BACK_COLOR);
+    PaintRect(&window->portRect);
 
     GetDC(hMainWnd);
     WndProc(WM_PAINT, 0);
-    DrawControls(window);
     ReleaseDC(hMainWnd);
 
     GetDC(hTestMonitor);
     TestMonitorWndProc();
     ReleaseDC(hTestMonitor);
+
+    GetDC(hExplainWnd);
+    SetColor(BLACK_COLOR);
+    EraseRect(&(*richText)->frame);
+    TBUpdate(richText);
+    DrawEdge(&(*richText)->frame, BDR_SUNKENOUTER, BF_RECT);
+    ReleaseDC(hExplainWnd);
+
+    UpdateControls(window, window->visRgn);
 
     EndUpdate(window);
 }
@@ -150,23 +204,33 @@ void DoMouseDown(EventRecord &event) {
                 SelectWindow(thisWindow);
             }
             else if(thisWindow == tipWindow) {
-                long id = 0;
                 Point mouse = event.where;
-                GetDC(hMainWnd);
+                GrafPtr oldPort;
+                GetPort(&oldPort);
+                SetPort(thisWindow);
                 GlobalToLocal(&mouse);
-                if(FindControl(mouse, thisWindow, &thisControl) == inButton) {
-                    if(TrackControl(thisControl, mouse, 0) == inButton) {
-                        id = GetControlReference(thisControl);
+                const bool hitButton = (!TBMouseDown(richText, mouse, thisWindow)) &&
+                                       (FindControl(mouse, thisWindow, &thisControl) == inButton) &&
+                                       (TrackControl(thisControl, mouse, 0) == inButton);
+                SetPort(oldPort);
+                if(hitButton) {
+                    int id = GetControlReference(thisControl);
+                    switch(id) {
+                        case IDB_OKAY:
+                            SetPage(kTestingPage);
+                            break;
+                        case IDB_EXPL:
+                            SetPage(kExplainPage);
+                            break;
+                        case IDB_READ:
+                            OpenExplanationInSimpleText();
+                            break;
+                        default:
+                            WndProc(WM_COMMAND, id);
+                            break;
                     }
                 }
-                ReleaseDC(hMainWnd);
-                if(id) {
-                    WndProc(WM_COMMAND, id);
-                }
             }
-            break;
-        case inDrag:
-            DragWindow(thisWindow, event.where, &(*GetGrayRgn())->rgnBBox);
             break;
         case inGrow:
             //DoGrowWindow(thisWindow, event);
@@ -222,6 +286,35 @@ void StrToPascal(Str255 pStr, const char *str) {
     strncpy((char*)pStr + 1, str, 255);
 }
 
+void SetPage(TipPage newPage) {
+    if(page == newPage) return;
+    page = newPage;
+    switch(page) {
+        case kTestingPage:
+            ShowWindow(IDB_TEST, SW_SHOW);
+            ShowWindow(IDB_BACK, SW_HIDE);
+            ShowWindow(IDB_NEXT, SW_HIDE);
+            ShowWindow(IDB_EXPL, SW_SHOW);
+            ShowWindow(IDB_OKAY, SW_HIDE);
+            ShowWindow(IDB_QUIT, SW_SHOW);
+            ShowWindow(IDB_READ, SW_HIDE);
+            HideControl((*richText)->scroll);
+            break;
+        case kExplainPage:
+            ShowWindow(IDB_TEST, SW_HIDE);
+            ShowWindow(IDB_BACK, SW_HIDE);
+            ShowWindow(IDB_NEXT, SW_HIDE);
+            ShowWindow(IDB_EXPL, SW_HIDE);
+            ShowWindow(IDB_OKAY, SW_SHOW);
+            ShowWindow(IDB_QUIT, SW_HIDE);
+            ShowWindow(IDB_READ, SW_SHOW);
+            ShowControl((*richText)->scroll);
+            TBSetScroll(richText, 0);
+            break;
+    }
+    InvalidateRect(hMainWnd);
+}
+
 /*******************************************************************************
  * SHOW ALERT BOX
  *******************************************************************************/
@@ -242,6 +335,55 @@ int ShowAlert(AlertTypes type, const char* format, ...) {
 }
 
 /*******************************************************************************
+ * GET EXPLANATION FSSPEC
+ *
+ * Returns the FSSpec for an explanation file
+ *******************************************************************************/
+OSErr GetExplanationFSSpec(const char *name, FSSpec *docSpec) {
+    Str255 docName;
+    StrToPascal(docName, name);
+
+    Str255 pathName;
+    pstrcpy(pathName, "\p:tip-doc:");
+    pstrcat(pathName, docName);
+
+    OSErr err = FSMakeFSSpec(0, 0, pathName, docSpec);
+    if(err) {
+        ShowAlert(ERR_DLG, "Can't find the \"%s\" file. Make sure it is inside the \"tip-doc\" folder.", name);
+    }
+    return err;
+}
+
+/*******************************************************************************
+ * OPEN EXPLANATION IN SIMPLE TEXT
+ *
+ * Opens the currently selected TIP explanation file using SimpleText
+ *
+ * This uses code from Thomas Tempelmann's C libraries
+ *
+ * http://www.tempel.org/macdev/index.html
+ *******************************************************************************/
+void OpenExplanationInSimpleText() {
+    FSSpec docSpec;
+    FSSpec appSpec;
+
+    OSErr err = GetExplanationFSSpec(textFileName, &docSpec);
+    if(err != noErr) return;
+
+    err = FindApplicationFromDocument(&docSpec, &appSpec);
+    if(err) {
+        ShowAlert(ERR_DLG, "Can't find an application to open \"%s\". Is \"SimpleText\" installed?", textFileName);
+        return;
+    }
+
+    err = LaunchApplicationWithDocument(&appSpec, &docSpec, false);
+    if(err) {
+        ShowAlert(ERR_DLG, "Can't open \"%s\". If \"%#s\" is already running, please close it.", textFileName, appSpec.name);
+        return;
+    }
+}
+
+/*******************************************************************************
  * SET RICH EDIT TEXT
  *
  * This routine will open one of the TIP explanation files using SimpleText
@@ -252,38 +394,28 @@ int ShowAlert(AlertTypes type, const char* format, ...) {
  *******************************************************************************/
 
 void SetRichEditText(const char *name) {
-    static const char *lastName = 0;
-    if(name == lastName) return;
-    lastName = name;
+    short fRefNum = 0;
 
-    if(ShowAlert(YN_DLG, "Would you like to read the document \"%s\" now?", name) == 2) {
-        return;
-    }
-    Str255 docName;
-    StrToPascal(docName, name);
+    // Don't reload a file that is already loaded
 
-    Str255 pathName;
-    pstrcpy(pathName, "\p:tip-doc:");
-    pstrcat(pathName, docName);
+    if(textFileName == name) return;
+    textFileName = name;
+
+    printf("Loading explanation file \"%s\"\n", name);
+
+    // Get the specification for the explanation file
 
     FSSpec docSpec;
-    FSSpec appSpec;
-    OSErr err = FSMakeFSSpec(0, 0, pathName, &docSpec);
-    if(err) {
-        ShowAlert(ERR_DLG, "Can't find the \"%s\" file. Make sure it is inside the \"tip-doc\" folder.", name);
-        return;
+    OSErr err = GetExplanationFSSpec(textFileName, &docSpec);
+    if(err != noErr) return;
+
+    // Load the text from the data fork
+
+    if (name != szRunning && name != szNotRunning) {
+        SetPage(kExplainPage);
     }
 
-    err = FindApplicationFromDocument(&docSpec, &appSpec);
-    if(err) {
-        ShowAlert(ERR_DLG, "Can't find an application to open \"%s\". Is \"SimpleText\" installed?", name);
-        return;
-    }
-    err = LaunchApplicationWithDocument(&appSpec, &docSpec, false);
-    if(err) {
-        ShowAlert(ERR_DLG, "Can't open \"%s\". If \"%#s\" is already running, please close it.", name, appSpec.name);
-        return;
-    }
+    TBReadSimpleText(richText, &docSpec);
 }
 
 /*******************************************************************************
@@ -291,7 +423,7 @@ void SetRichEditText(const char *name) {
  *******************************************************************************/
 
 void SetColor(long color) {
-    if (AllowColor) {
+    if (allowColor) {
         if(color == BACK_COLOR) color = LTGRAY_COLOR;
         // Use colors when available
         RGBColor rgbColor;
@@ -325,7 +457,7 @@ void SetColor(long color) {
 }
 
 void SetColor(long color, long monoColor) {
-    if (AllowColor) {
+    if (allowColor) {
         SetColor(color);
     } else {
         SetColor(monoColor);
@@ -342,7 +474,7 @@ void DrawLed(int x, int y, long color) {
     // Draw the LED
     SetColor(color);
     PaintOval(&ledRect);
-    if (AllowColor) {
+    if (allowColor) {
         // Draw a recessed outline
         SetColor(BLACK_COLOR);
         FrameOval(&ledRect);
@@ -372,7 +504,7 @@ void DrawLed(int x, int y, long color) {
  *******************************************************************************/
 
 void DrawEdge(Rect *qrc, int edge, int grfFlags) {
-    if(edge == BDR_SUNKENOUTER && AllowColor) {
+    if(edge == BDR_SUNKENOUTER && allowColor) {
         // Draw a sunken rectangle
         SetColor(GRAY_COLOR);
         MoveTo(qrc->left,qrc->bottom-1);
@@ -453,9 +585,10 @@ unsigned long GetSystemTime() {
 void SetWindowText(int id, const char *str) {
     Str255 pStr;
     StrToPascal(pStr, str);
-    if(testBtn && id == hTestButton) {
+    ControlHandle hCntl = FindControl(id);
+    if(hCntl) {
         GetDC(hMainWnd);
-        SetCTitle(testBtn, pStr);
+        SetCTitle(hCntl, pStr);
         ReleaseDC(hMainWnd);
     }
 }
@@ -464,12 +597,25 @@ void SetWindowText(int id, const char *str) {
  * ENABLE WINDOW
  *******************************************************************************/
 void EnableWindow(int id, bool enabled) {
-    ControlHandle hCntl = 0;
-    if(id == hTestButton) hCntl = testBtn;
-    if(id == hExitButton) hCntl = exitBtn;
+    ControlHandle hCntl = FindControl(id);
     if(hCntl) {
         GetDC(hMainWnd);
         HiliteControl(hCntl, enabled ? 0 : 255);
+        ReleaseDC(hMainWnd);
+    }
+}
+
+/*******************************************************************************
+ * SHOW WINDOW
+ *******************************************************************************/
+void ShowWindow(int id, int state) {
+    ControlHandle hCntl = FindControl(id);
+    if(hCntl) {
+        GetDC(hMainWnd);
+        if(state == SW_SHOW)
+            ShowControl(hCntl);
+        else
+            HideControl(hCntl);
         ReleaseDC(hMainWnd);
     }
 }

@@ -1,5 +1,4 @@
-
-typedef Boolean bool;
+#include "ctype.h"
 
 extern WindowPtr tipWindow;
 
@@ -38,25 +37,27 @@ extern long SingleTransferLBA;
 // ----------------------- Macintosh Compatibility -----------------------
 
 enum AlertTypes {
-    ERR_DLG,
-    YN_DLG
+	ERR_DLG,
+	YN_DLG
 };
 
 enum {
-    BACK_COLOR   = -1,
-    BLACK_COLOR  = 0x000000,
-    LTGRAY_COLOR = 0xc0c0c0,
-    GRAY_COLOR   = 0x808080,
-    WHITE_COLOR  = 0xffffff,
-    BLUE_COLOR   = 0x0000ff,
-    RED_COLOR    = 0xff0000,
-    GREEN_COLOR  = 0x00ff00,
+	BACK_COLOR	 = -1,
+	BLACK_COLOR	 = 0x000000,
+	LTGRAY_COLOR = 0xc0c0c0,
+	GRAY_COLOR	 = 0x808080,
+	WHITE_COLOR	 = 0xffffff,
+	BLUE_COLOR	 = 0x0000ff,
+	RED_COLOR	 = 0xff0000,
+	GREEN_COLOR	 = 0x00ff00,
 };
 
 #define BDR_SUNKENOUTER 1
 #define BF_RECT 1
 #define WM_PAINT 1
 #define WM_COMMAND 2
+#define SW_SHOW 1
+#define SW_HIDE 2
 
 void SetColor(long color);
 void SetColor(long color, long monoColor);
@@ -70,6 +71,7 @@ void TextOut(int x, int y, const char *str);
 void TextOutCentered(int x, int y, int w, int h, const char *str);
 void SetWindowText(int id, const char *str);
 void EnableWindow(int id, bool enabled);
+void ShowWindow(int id, int state);
 void InvalidateRect(int id);
 void Rectangle(int left, int top, int right, int bottom);
 void DrawEdge(Rect *qrc, int edge, int grfFlags);
@@ -77,45 +79,44 @@ void StartApplicationTimer();
 void StopApplicationTimer();
 void PostQuitMessage();
 unsigned long GetSystemTime();
+bool PrepareDC(int which);
 
-#define GetDC(h)     {GrafPtr oldPort; \
-                     GetPort(&oldPort); \
-                     SetPort(tipWindow); \
-                     if(h == hTestMonitor) SetOrigin(-20, -10); \
-                     if(h == hMainWnd) SetOrigin(0,  40);
+#define GetDC(h)	 {GrafPtr oldPort; \
+					 GetPort(&oldPort); \
+					 if(PrepareDC(h)) {
 
-#define ReleaseDC(h) SetOrigin(0,0); \
-                     SetPort(oldPort);}
+#define ReleaseDC(h) } SetOrigin(0,0); \
+					 SetPort(oldPort);}
 
 
-// ------------------------------   Cartridge Status -------------------------------
+// ------------------------------	Cartridge Status -------------------------------
 
 enum {
-    DISK_STATUS_UNKNOWN  = 1,
-    DISK_AT_SPEED        = 2,
-    DISK_SPINNING_UP     = 3,
-    DISK_NOT_PRESENT     = 4,
-    DISK_SPUN_DOWN       = 5,
-    DISK_STALLED         = 6,
-    DISK_Z_TRACK_FAILURE = 7,
-    DISK_PROTECTED       = 8,
-    DISK_LOW_SPARES      = 9,
-    DISK_TEST_UNDERWAY   = 10,
-    DISK_TEST_FAILURE    = 11,
+	DISK_STATUS_UNKNOWN	 = 1,
+	DISK_AT_SPEED		 = 2,
+	DISK_SPINNING_UP	 = 3,
+	DISK_NOT_PRESENT	 = 4,
+	DISK_SPUN_DOWN		 = 5,
+	DISK_STALLED		 = 6,
+	DISK_Z_TRACK_FAILURE = 7,
+	DISK_PROTECTED		 = 8,
+	DISK_LOW_SPARES		 = 9,
+	DISK_TEST_UNDERWAY	 = 10,
+	DISK_TEST_FAILURE	 = 11,
 
-    LAST_CART_STATUS     = 11
+	LAST_CART_STATUS	 = 11
 };
 
 // ---------------------------- Testing Phase Status -----------------------------
 
 enum {
-    UNTESTED              = 0,
-    READY_TO_TEST         = 1,
-    TESTING_STARTUP       = 2,
-    READING_DATA          = 3,
-    WRITING_PATT          = 4,
-    READING_PATT          = 5,
-    WRITING_DATA          = 6
+	UNTESTED			  = 0,
+	READY_TO_TEST		  = 1,
+	TESTING_STARTUP		  = 2,
+	READING_DATA		  = 3,
+	WRITING_PATT		  = 4,
+	READING_PATT		  = 5,
+	WRITING_DATA		  = 6
 };
 
 /*******************************************************************************
@@ -195,18 +196,31 @@ extern const char *szNext;
 extern const char *szQuit;
 
 enum {
-    hMainWnd,
-    hTestMonitor,
-    hTestButton,
-    hExitButton
+	hMainWnd,
+	hTestMonitor,
+	hTestButton,
+	hExitButton,
+	// Extras added by MLT
+	hExplainWnd
 };
 
 #define IDB_BACK 0xFF00
 #define IDB_NEXT 0xFF01
 #define IDB_QUIT 0xFF02
 #define IDB_TEST 0xFF03
+#define IDB_EXPL 0xFF04
+#define IDB_OKAY 0xFF05
+#define IDB_READ 0xFF06
 
-typedef struct {long id; const char *name; int x; int y; int w; int h; bool visible;} BtnList;
+typedef struct {
+	int id;
+	const char *name;
+	int x;
+	int y;
+	int w;
+	int h;
+	ControlHandle hndl;
+} BtnList;
 extern BtnList tipBtns[];
 
 /*******************************************************************************
@@ -233,7 +247,7 @@ void AllowProgramExit();
 void ErrorSound();
 void ProcessPendingMessages();
 void WinMain(int Device);
-void WndProc(long iMessage, long wParam);
+void WndProc(long iMessage, uint16_t wParam);
 void TestMonitorWndProc();
 void ApplicationTimerProc();
 void TestButtonClicked();

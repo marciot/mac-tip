@@ -107,7 +107,7 @@ long Side_1_SparesCount; // ZIP has counts for both sides
 long Initial_Side_0_Spares;
 long Initial_Side_1_Spares;
 
-long TestingPhase; // 0 = not testing, no data ...
+long TestingPhase = 0; // 0 = not testing, no data ...
 long PercentComplete;
 long FirstLBASector;
 long NumberOfLBAs;
@@ -523,12 +523,6 @@ void SetCartridgeStatusToEAX(long eax) {
         return;
     }
     LastCartridgeStatus = CartridgeStatus;
-     // Disable testing button when no drives present
-    if (!DriveCount) {
-        // MLT: Added this check.
-        SetRichEditText(szASPITrouble);
-        goto DisableActions;
-    }
     /**************************************************************************/
 
     // Set the text of the "action initiate button"
@@ -544,7 +538,7 @@ void SetCartridgeStatusToEAX(long eax) {
             esi = szPressToStop;
             break;
         case DISK_NOT_PRESENT:
-            //SetRichEditText(szNotRunning);
+            SetRichEditText(szNotRunning);
             goto DisableActions;
         case DISK_AT_SPEED:
             eax = GetSpareSectorCounts(true); // update the Cart Condition
@@ -813,7 +807,7 @@ void TestTheDisk() {
     StopApplicationTimer();
 
     PreventProgramExit();
-    //SetRichEditText(szRunning);
+    SetRichEditText(szRunning);
     CartridgeStatus = DISK_TEST_UNDERWAY;
     TestingPhase = TESTING_STARTUP; // inhibit stopping now
     SetWindowText(hTestButton, szPressToStop);

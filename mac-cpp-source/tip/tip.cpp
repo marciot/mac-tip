@@ -28,6 +28,11 @@ void WinMain(int Device) {
     CurrentDevice = Device;
     // test for an Iomega device
     EnumerateIomegaDevices(CurrentDevice);
+    // Disable testing button when no drives present (added by mlt)
+    if (!DriveCount) {
+        EnableWindow(hTestButton, false);
+        SetRichEditText(szASPITrouble);
+    }
     // now startup the timer for real-time features
     StartApplicationTimer();
 }
@@ -37,7 +42,7 @@ void WinMain(int Device) {
  *
  * This is the system's main window procedure
  *******************************************************************************/
-void WndProc(long iMessage, long wParam) {
+void WndProc(long iMessage, uint16_t wParam) {
     // -------------------------------------------------------------------------
     // WM_PAINT
     // -------------------------------------------------------------------------
@@ -102,11 +107,15 @@ void WndProc(long iMessage, long wParam) {
 }
 
 BtnList tipBtns[] = {
-    {IDB_TEST, szPressToStart, 200, 301, 160, 24, true}, // Added by MLT
-    {IDB_BACK, szBack, 185-28, 301, 80, 24, false},
-    {IDB_NEXT, szNext, 264-28, 301, 80, 24, false},
-    {IDB_QUIT, szQuit, 367+35, 301, 45, 24, true},
-    {0, 0, 0, 0, 0, 0, 0}
+    {IDB_BACK, szBack, 157, 301, 80, 24},
+    {IDB_NEXT, szNext, 236, 301, 80, 24},
+    {IDB_QUIT, szQuit, 402, 301, 45, 24},
+     // For Mac TIP only
+    {IDB_TEST, szPressToStart, 157, 301, 150, 24},
+    {IDB_EXPL, "Explain", 330, 301, 60, 24},
+    {IDB_OKAY, "Okay",    380, 301, 65, 24},
+    {IDB_READ, "Open in SimpleText...", 210, 301, 160, 24},
+    {0, 0, 0, 0, 0, 0}
 };
 
 /*******************************************************************************
