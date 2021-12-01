@@ -83,3 +83,22 @@ void mac_unmount(int id) {
         default: printf("Failed %d\n", err);
     }
 }
+
+void mac_eject(int id) {
+    HParamBlockRec paramBlock;
+    paramBlock.volumeParam.ioCompletion = 0;
+    paramBlock.volumeParam.ioNamePtr = 0;
+    paramBlock.volumeParam.ioVRefNum = 0;
+    paramBlock.volumeParam.ioVolIndex = id;
+    OSErr err = PBHGetVInfo(&paramBlock, false);
+    if (err == nsvErr) {
+        printf("No such volume\n");
+        return;
+    }
+    err = Eject(0, paramBlock.volumeParam.ioVRefNum);
+    switch (err) {
+        case noErr: printf("Okay\n"); break;
+        case fBsyErr: printf("One or more files are open\n"); break;
+        default: printf("Failed %d\n", err);
+    }
+}

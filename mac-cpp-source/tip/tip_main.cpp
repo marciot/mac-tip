@@ -13,6 +13,7 @@
 #include "mac_vol.h"
 #include "text_box.h"
 #include "tip.h"
+#include "command_line.h"
 
 enum TipPage {
     kTestingPage,
@@ -24,12 +25,16 @@ static bool          allowColor;
 static bool          inited = false;
 static bool          timerEnabled = false;
 static WindowPtr     tipWindow;
+static MenuHandle    tipMenu;
 static TBHandle      richText;
 static const char   *textFileName;
 
 void NewTipWindow();
 void DisposeTipWindow();
+void AddTipMenus();
+void RunCommandLine();
 void DoEvent(EventRecord &event, RgnHandle *cursorRgn);
+void DoMenuEvent(EventRecord &event);
 void DoUpdate(WindowPtr window);
 void DoMouseDown(EventRecord &event);
 void DoMouseMove(EventRecord &event, RgnHandle *cursorRegion);
@@ -44,6 +49,8 @@ void OpenExplanationInSimpleText();
 const Point mainWndOrigin = SET_POINT(0, 40);
 
 void run_tip() {
+    AddTipMenus();
+
     RgnHandle cursorRgn = NewRgn();
 
     NewTipWindow();
@@ -136,6 +143,24 @@ void NewTipWindow() {
     SetPage(kTestingPage);
 }
 
+void AddTipMenus() {
+    tipMenu = GetMenu(128);
+    InsertMenu(tipMenu, 0);
+    DrawMenuBar();
+}
+
+void RunCommandLine() {
+    HideWindow(tipWindow);
+    DisableItem(tipMenu, 0);
+    DrawMenuBar();
+    command_line_event_loop();
+    EnableItem(tipMenu, 0);
+    DrawMenuBar();
+    ShowWindow(tipWindow);
+    SelectWindow(tipWindow);
+    InitCursor();
+}
+
 void DisposeTipWindow() {
     TBDispose(richText);
     DisposeWindow(tipWindow);
@@ -178,7 +203,37 @@ void DoEvent(EventRecord &event, RgnHandle *cursorRgn) {
             case diskEvt:   DoDiskEvent(event); break;
             case osEvt:     DoMouseMove(event, cursorRgn); break;
         }
+    } else { // Trap unhandled SIOUX menu events
+        DoMenuEvent(event);
     }
+}
+
+void DoMenuEvent(EventRecord &event) {
+    // SIOUX will handle the menu event, but we can check after the fact
+    // to see whether the user selected one of our menus
+
+    WindowPtr thisWindow;
+    if(event.what == mouseDown && FindWindow(event.where, &thisWindow) == inMenuBar) {
+        long int choice = MenuChoice();
+        int menuId = HiWord(choice);
+        int itemId = LoWord(choice);
+        switch(menuId)  {
+            case 32000: // Apple menu
+                SysBeep(10);
+                break;
+            case 32001: // File menu
+                if (itemId == 9) {
+                    WndProc(WM_COMMAND, IDB_QUIT);
+                }
+                break;
+            case 32002: // Edit menu
+            case 128:   // TIP menu
+                switch(itemId) {
+                    case 1: HiliteMenu(0); RunCommandLine(); break;
+                }
+        }
+    }
+    HiliteMenu(0);
 }
 
 void DoUpdate(WindowPtr window) {
