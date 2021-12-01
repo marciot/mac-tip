@@ -274,7 +274,8 @@ long EnumerateIomegaDevices(uint8_t *DrivesSkipped) {
 
             // On the Mac, we want to ignore drives that have media in them at
             // program entry, as this means the volume is mounted in Mac OS
-            const bool driveEmpty = GetCartridgeStatus(Device) == DISK_NOT_PRESENT;
+            JazDrive = isJaz;
+            const bool driveEmpty = (GetCartridgeStatus(Device) == DISK_NOT_PRESENT);
             if(driveEmpty) {
                 DriveArray[DriveCount].flags = flags;
                 DriveArray[DriveCount].scsi_id = Device;

@@ -5,9 +5,11 @@
 #include <ctype.h>
 #include <SIOUX.h>
 
+#include <Menus.h>
 #include <Windows.h>
 #include <Quickdraw.h>
 
+#include "TrapAvail.h"
 #include "pstring.h"
 #include "LaunchLib.h"
 #include "mac_vol.h"
@@ -34,7 +36,8 @@ void DisposeTipWindow();
 void AddTipMenus();
 void RunCommandLine();
 void DoEvent(EventRecord &event, RgnHandle *cursorRgn);
-void DoMenuEvent(EventRecord &event);
+void DoMenuEventPostSIOUX(EventRecord &event);
+bool DoMenuSelection(long choice);
 void DoUpdate(WindowPtr window);
 void DoMouseDown(EventRecord &event);
 void DoMouseMove(EventRecord &event, RgnHandle *cursorRegion);
@@ -144,6 +147,13 @@ void NewTipWindow() {
 }
 
 void AddTipMenus() {
+    if(!TrapAvailable(0xAA66)) {
+        // If MenuChoice is available, we can let SIOUX handle the menus,
+        // otherwise we have to handle it ourselves
+        SIOUXSettings.setupmenus = FALSE;
+    }
+
+    // Add our menu
     tipMenu = GetMenu(128);
     InsertMenu(tipMenu, 0);
     DrawMenuBar();
@@ -204,36 +214,54 @@ void DoEvent(EventRecord &event, RgnHandle *cursorRgn) {
             case osEvt:     DoMouseMove(event, cursorRgn); break;
         }
     } else { // Trap unhandled SIOUX menu events
-        DoMenuEvent(event);
+        DoMenuEventPostSIOUX(event);
     }
 }
 
-void DoMenuEvent(EventRecord &event) {
-    // SIOUX will handle the menu event, but we can check after the fact
-    // to see whether the user selected one of our menus
+void DoMenuEventPostSIOUX(EventRecord &event) {
+    if(!SIOUXSettings.setupmenus) return;
+
+    /* If MenuChoice is available, it is best to let SIOUX handle the menu
+     * event so Copy and Paste will work. We can check after the fact
+     * to see whether the user selected one of our menus using MenuChoice.
+     * However, if that trap is not available, we must handle the menu
+     * ourselves and certain menu items will not work
+     */
 
     WindowPtr thisWindow;
-    if(event.what == mouseDown && FindWindow(event.where, &thisWindow) == inMenuBar) {
-        long int choice = MenuChoice();
-        int menuId = HiWord(choice);
-        int itemId = LoWord(choice);
-        switch(menuId)  {
-            case 32000: // Apple menu
-                SysBeep(10);
-                break;
-            case 32001: // File menu
-                if (itemId == 9) {
-                    WndProc(WM_COMMAND, IDB_QUIT);
-                }
-                break;
-            case 32002: // Edit menu
-            case 128:   // TIP menu
-                switch(itemId) {
-                    case 1: HiliteMenu(0); RunCommandLine(); break;
-                }
-        }
+    if((event.what == mouseDown) && (FindWindow(event.where, &thisWindow) == inMenuBar)) {
+        DoMenuSelection(MenuChoice());
+    }
+}
+
+bool DoMenuSelection(long choice) {
+    bool handled = false;
+    int menuId = HiWord(choice);
+    int itemId = LoWord(choice);
+    //printf("Menu choice: %d,  %d\n", menuId, itemId);
+    switch(menuId)  {
+        case 32000: // Apple menu             SysBeep(10);
+            break;
+        case 32001: // File menu
+            if (itemId == 9) { // Quit
+                WndProc(WM_COMMAND, IDB_QUIT);
+                handled = true;
+            }
+            break;
+        case 32002: // Edit menu
+            break;
+        case 128:   // TIP menu
+            switch(itemId) {
+                case 1: // Run Command Line...
+                    HiliteMenu(0);
+                    RunCommandLine();
+                    handled = true;
+                    break;
+            }
+            break;
     }
     HiliteMenu(0);
+    return handled;
 }
 
 void DoUpdate(WindowPtr window) {
@@ -257,6 +285,7 @@ void DoUpdate(WindowPtr window) {
     DrawEdge(&(*richText)->frame, BDR_SUNKENOUTER, BF_RECT);
     ReleaseDC(hExplainWnd);
 
+    SetColor(BLACK_COLOR);
     UpdateControls(window, window->visRgn);
 
     EndUpdate(window);
@@ -310,6 +339,14 @@ void DoMouseDown(EventRecord &event) {
             if (TrackGoAway(thisWindow, event.where)) {
                 gDone = true;
             }
+            break;
+        case inMenuBar:
+            if(!DoMenuSelection(MenuSelect(event.where))) {
+                SysBeep(10);
+            }
+            break;
+        case inDrag:
+            DragWindow(thisWindow, event.where, &(*GetGrayRgn())->rgnBBox);
             break;
     }
 }
