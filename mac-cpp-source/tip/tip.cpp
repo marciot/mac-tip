@@ -24,12 +24,16 @@ Rect SE_Rect = SET_RECT(222, 154, 255, 221);
  *
  * Startup the Windows program.
  *******************************************************************************/
-void WinMain(int Device) {
-    CurrentDevice = Device;
+void WinMain(uint8_t *DrivesSkipped) {
+    CurrentDevice = 0;
     // test for an Iomega device
-    EnumerateIomegaDevices(CurrentDevice);
-    // Disable testing button when no drives present (added by mlt)
-    if (!DriveCount) {
+    EnumerateIomegaDevices(DrivesSkipped);
+    if (DriveCount == 1) {
+        // we have only one, so select it for the user
+        CurrentDevice = DriveArray[0].scsi_id;
+    }
+    if (DriveCount == 0) {
+        // disable testing button when no drives present (added by mlt)
         EnableWindow(hTestButton, false);
         SetRichEditText(szASPITrouble);
     }
@@ -90,7 +94,7 @@ void WndProc(long iMessage, uint16_t wParam) {
                     case DISK_Z_TRACK_FAILURE:
                     case DISK_TEST_FAILURE:
                     case DISK_PROTECTED:
-                        EjectIomegaCartridge();
+                        EjectIomegaCartridge(CurrentDevice);
                         break;
                     case DISK_LOW_SPARES:
                         SetRichEditText(szNotRunning);

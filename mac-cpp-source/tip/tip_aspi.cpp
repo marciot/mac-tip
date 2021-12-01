@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "mac_scsi.h"
 #include "tip.h"
 
@@ -49,14 +50,6 @@ struct DEFECT_LIST_HEADER {
     short DLH_DefectListLength;
 };
 
-//-------------------------- Drive Array Status Flags ---------------------------
-
-#define JAZ_DRIVE             0x00010000
-#define MEDIA_CHANGED         0x00020000
-#define DISK_EJECTING         0x00040000 // we've asked for eject and waiting ...
-#define ODD_BYTE_COMPENSATION 0x00080000 // special handling for ODD length PSWD
-#define MAX_DRIVE_COUNT       16         // we can handle up to 16 Zip/Jaz drives
-
 #define ERROR_RECOVERY_PAGE                  1 // From disassembly
 #define FORMAT_STATUS_PAGE                   1
 #define DISK_STATUS_PAGE                     2
@@ -83,16 +76,20 @@ struct DEFECT_LIST_HEADER {
 
 #define BADNESS_THRESHOLD 10
 
-#define SS_ERR                               0x00000004 // From disassembly
-#define BUFFER_TOO_BIG                       0x00FFFFE6 // From disassembly
-#define LBA_TOO_LARGE                        0x00210005 // From disassembly
-#define INCOMPATIBLE_MEDIA                   0x00300002 // From disassembly
-#define MEDIA_NOT_PRESENT                    0x003a0002 // From disassembly
-#define DEFECT_LIST_READ_ERROR               0x001c0003 // From disassembly
+#define SS_ERR                               0x00000004
+#define DEFECT_LIST_READ_ERROR               0x001c0003
+#define LBA_TOO_LARGE                        0x00210005 // accessed a non-exist LBA
+#define MEDIA_CHANGE_CODE                    0x00280006 // media was changed
+#define INCOMPATIBLE_MEDIA                   0x00300002 // 2Gb / 1Gb combo on "Read Defects"
+#define MEDIA_NOT_PRESENT                    0x003a0002
+#define DRIVE_COMING_READY                   0x00040102
+#define SCSI_CMD_TIMED_OUT                   0x00FFFF00
+#define BUFFER_TOO_BIG                       0x00FFFFE6
+#define MANUAL_INTERRUPTION                  0xFFFFFFFF
 
 #define CHECK_CONDITION 0x02
 
-long CurrentDevice = 0;
+long CurrentDevice = -1; // the device that's been recognized
 long DriveCount = 0;
 
 long JazDrive = 0; // true if the current drive
@@ -121,6 +118,20 @@ long CurrentTotalTimeEstimate;
 bool UserInterrupt;
 long LastError;
 long SingleTransferLBA;
+
+DriveEntry DriveArray[MAX_DRIVE_COUNT];
+
+/*******************************************************************************
+ * GET DRIVE ENTRY OFFSET
+ *
+ * Returns the offset of the chosen drive's status word
+ *******************************************************************************/
+int GetDriveEntryOffset(short Device) {
+    for(int i = 0; i < MAX_DRIVE_COUNT; i++)
+        if(DriveArray[i].scsi_id == Device) // did we find the right table slot?
+            return i;
+    return 0;
+}
 
 /*******************************************************************************
  * GET COMMAND DETAILS
@@ -196,9 +207,15 @@ long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen) {
         printf("SCSI CHECK CONDITION (KEY %x, ASC %x, ASCQ %x)\n", sense_data.key, sense_data.asc, sense_data.ascq);
         // okay, we have an SS_ERR condition, let's check the SENSE DATA
         // assemble [00 ASC ASCQ SenseKey]
-        return (long(sense_data.asc) << 16) |
-               (long(sense_data.ascq) << 8) |
-               (long(sense_data.key)      );
+        long res = (long(sense_data.asc) << 16) |
+                   (long(sense_data.ascq) << 8) |
+                   (long(sense_data.key)      );
+        if(res == MEDIA_CHANGE_CODE) {
+            int index = GetDriveEntryOffset(Device);
+            DriveArray[index].flags |= MEDIA_CHANGED;
+            return 0;
+        }
+        return 0;
     }
     else {
         // else, if it's *NOT* a "Sense Data" error (SS_ERR)
@@ -209,33 +226,72 @@ long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen) {
 /*******************************************************************************
  * ENUMERATE IOMEGA DEVICES
  *******************************************************************************/
-void EnumerateIomegaDevices(long Device) {
+short stricmp( const char *str1, const char *str2 );
+short stricmp( const char *str1, const char *str2 ) {
+    while (*str1 && *str2) {
+        short cmp = tolower( *str1++ ) - tolower( *str2++ );
+        if(cmp != 0) return cmp;
+    }
+    return 0;
+}
+
+long EnumerateIomegaDevices(uint8_t *DrivesSkipped) {
     DriveCount = 0;
-    JazDrive = 0;
-    //-----------------------------------------------------------
-    char InqData[96];
-    char Scsi[6] = {0};
-    Scsi[0] = SCSI_Cmd_Inquiry;
-    Scsi[4] = sizeof(InqData);
-    long eax = SCSICommand(Device, Scsi, InqData, sizeof(InqData));
-    if(eax) goto TryNextDrive;
-    //-----------------------------------------------------------
-    InqData[14] = '\0';
-    if (strcmp(szIomega, InqData + 8)) goto TryNextDrive;
-    //-----------------------------------------------------------
-    InqData[19] = '\0';
-    if (!strcmp(szZip, InqData + 16)) goto FoundZipOrJaz;
-    //-----------------------------------------------------------
-    if (strcmp(szJaz, InqData + 16)) goto TryNextDrive;
-    JazDrive = 1;
-    FoundZipOrJaz:
-    DriveCount = 1;
-    if(JazDrive)
-        printf("Found Jaz drive\n");
-    else
-        printf("Found Zip drive\n");
-TryNextDrive:
-    return;
+    if(DrivesSkipped) *DrivesSkipped = 0;
+
+    printf("\nEnumerating Iomega Devices:\n");
+    // now scan the devices on the SCSI host adapter
+    for(int Device = 0; Device < 8; Device++) {
+        char flags = 0;
+        //-----------------------------------------------------------
+        #ifdef NO_EXCESS_READS
+            scsi_inq_reply reply;
+            if(scsi_inquiry(Device, 0, &reply) != noErr) continue;
+            char *InqData = (char*) &reply;
+        #else
+            char InqData[96];
+            char Scsi[6] = {0};
+            Scsi[0] = SCSI_Cmd_Inquiry;
+            Scsi[4] = sizeof(InqData);
+            if(SCSICommand(Device, Scsi, InqData, sizeof(InqData))) continue;
+        #endif
+
+        //-----------------------------------------------------------
+        InqData[14] = '\0';
+        InqData[19] = '\0';
+        const bool isIomega = !stricmp(szIomega, InqData + 8);
+        const bool isZip    = !stricmp(szZip, InqData + 16);
+        const bool isJaz    = !stricmp(szJaz, InqData + 16);
+        //-----------------------------------------------------------
+
+        if (isIomega && (isZip || isJaz)) {
+            char flags = isJaz ? JAZ_DRIVE : 0;
+            // check for ANSI SCSI to see whether we need to play
+            // the Odd/Even password length game ...
+            if(InqData[2] & 0x07 == 0) {
+                flags |= ODD_BYTE_COMPENSATION; // turn on compensation
+            }
+
+            // On the Mac, we want to ignore drives that have media in them at
+            // program entry, as this means the volume is mounted in Mac OS
+            const bool driveEmpty = GetCartridgeStatus(Device) == DISK_NOT_PRESENT;
+            if(driveEmpty) {
+                DriveArray[DriveCount].flags = flags;
+                DriveArray[DriveCount].scsi_id = Device;
+                DriveCount++;
+            } else {
+                if(DrivesSkipped) (*DrivesSkipped)++;
+            }
+
+            printf("    %d: %s %s %s\n", Device,
+                (flags & JAZ_DRIVE) ? "JAZ" : "ZIP",
+                (flags & ODD_BYTE_COMPENSATION) ? "OBC" : "   ",
+                (driveEmpty) ? "EMPTY" : "MEDIA");
+        }
+    }
+
+    printf("\n");
+    return DriveCount;
 }
 
 /*******************************************************************************
@@ -359,6 +415,18 @@ long UnlockCurrentDrive() {
 }
 
 /*******************************************************************************
+ * UNLOCK ALL MEDIA
+ *******************************************************************************/
+void UnlockAllMedia() {
+    // make sure the media is not locked as we exit...
+    char Scsi[6] = {0};
+    Scsi[0] = SCSI_Cmd_PreventAllow;
+    for(int i = 0; i < MAX_DRIVE_COUNT; i++) {
+        SCSICommand(DriveArray[i].scsi_id, Scsi, NULL, 0);
+    }
+}
+
+/*******************************************************************************
 * SPIN UP IOMEGA CARTRIDGE
 *******************************************************************************/
 long SpinUpIomegaCartridge(short Device) {
@@ -367,6 +435,16 @@ long SpinUpIomegaCartridge(short Device) {
    Scsi[1] = 1; // set the IMMED bit for offline
    Scsi[4] = 1; // start the disk spinning
    return SCSICommand(Device, Scsi, NULL, 0);
+}
+
+/*******************************************************************************
+ * EJECT ALL MEDIA
+ *******************************************************************************/
+void EjectAllMedia() {
+    // setup the SCSI command block for the operation
+    for(int i = 0; i < MAX_DRIVE_COUNT; i++) {
+        EjectIomegaCartridge(DriveArray[i].scsi_id);
+    }
 }
 
 /*******************************************************************************
@@ -475,34 +553,92 @@ long GetSpareSectorCounts(char checkPassword) {
 
 /*******************************************************************************
  * HANDLE DRIVE CHANGING
+ *
+ * If we're NOT in the middle of drive testing, check for any new drives
+ * going ready, eject all others, and Select the newer drive.
+ * If we *ARE* in the middle of drive testing, EJECT any new drive that's
+ * attempting to go ready.
  *******************************************************************************/
 void HandleDriveChanging() {
-    // MLT: At the moment, we only handle one drive.
+    bool Selecting = false; // true while we're changing selections
+    uint8_t status;
+Rescan:
+    for(int i = 0; i < DriveCount; i++) {
+        const int scsi_id = DriveArray[i].scsi_id;
+
+        // query the current state of the drive
+        do {
+            // clear media changed status
+            DriveArray[i].flags &= ~MEDIA_CHANGED;
+            GetCartridgeStatus(scsi_id);
+        } while(DriveArray[i].flags & MEDIA_CHANGED); // do it until NO media change!
+        //--------------------------------------------------------------------------
+        status = GetCartridgeStatus(scsi_id);
+        // if the device we have is NOT the currently selected one
+        if(scsi_id != CurrentDevice) {
+            // if the disk is ANYTHING other than not present ...
+            if(status != DISK_NOT_PRESENT) {
+                // we have a PRESENT DISK in a non-current drive
+                // if we're testing, reject it
+                if (Selecting || TestingPhase >= TESTING_STARTUP) {
+                    EjectIomegaCartridge(scsi_id);
+                    // flag that we're waiting for spindown
+                    DriveArray[i].flags |= DISK_EJECTING;
+                }
+                // if we're not testing, and not awaiting eject
+                // then set the current drive ...
+                else if ((DriveArray[i].flags & DISK_EJECTING) == 0) {
+                    CurrentDevice = scsi_id;
+                    TestingPhase = 0;
+                    Selecting = true;
+                    //goto Rescan;
+                    break;
+                    // the PREVIOUS drive (if any) will be ejected on the next pass
+                }
+            } else {
+                // the drive HAS spun down, so clear "waiting"
+                DriveArray[i].flags &= ~DISK_EJECTING;
+            }
+        } else {
+            // we're checking the current drive ... make SURE that
+            // it is *NOT* empty! If it *IS* empty, kill current
+            if(status == DISK_NOT_PRESENT) {
+                CurrentDevice = -1;
+                SetCartridgeStatusToEAX(status);
+            }
+            // if it's not already set correctly *and* either
+            // the cart status is one of the pre-test ones, or
+            // the NEW status from the cart is NOT "at speed" ...
+            if((status != CartridgeStatus) && ((CartridgeStatus <= DISK_STALLED) || (status != DISK_AT_SPEED))) {
+                SetCartridgeStatusToEAX(status);
+            }
+        }
+    }
+    // if nothing was chosen ... set us to the "Awaiting Cartridge" status
+    if ((CurrentDevice == -1) &&
+        (status == DISK_NOT_PRESENT) &&
+        (CartridgeStatus != DISK_NOT_PRESENT)) {
+            SetCartridgeStatusToEAX(status);
+    }
+}
+
+//-----------------------------------------------------------------------------
+// GET CARTRIDGE STATUS
+//-----------------------------------------------------------------------------
+uint8_t GetCartridgeStatus(long Device) {
     long eax;
     char DiskStat[72];
     #ifdef NO_EXCESS_READS
-        eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, JazDrive ? sizeof(DiskStat) : 63);
-        if (eax) return;
+        eax = GetNonSenseData(Device, DISK_STATUS_PAGE, DiskStat, JazDrive ? sizeof(DiskStat) : 63);
+        if (eax) return DISK_STATUS_UNKNOWN;
     #else
-        eax = GetNonSenseData(CurrentDevice, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
-        if (!eax) return;
+        eax = GetNonSenseData(Device, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
+        if (!eax) return DISK_STATUS_UNKNOWN;
     #endif
-    char status;
     if (DiskStat[0] == DISK_STATUS_PAGE) {
-        status = DiskStat[NEW_DISK_STATUS_OFFSET];
+        return DiskStat[NEW_DISK_STATUS_OFFSET];
     } else {
-        status = DiskStat[OLD_DISK_STATUS_OFFSET];
-    }
-    // we're checking the current drive ... make SURE that
-    // it is *NOT* empty! If it *IS* empty, kill current
-    if(status == DISK_NOT_PRESENT) {
-        SetCartridgeStatusToEAX(status);
-    }
-    // if it's not already set correctly *and* either
-    // the cart status is one of the pre-test ones, or
-    // the NEW status from the cart is NOT "at speed" ...
-    if((status != CartridgeStatus) && ((CartridgeStatus <= DISK_STALLED) || (status != DISK_AT_SPEED))) {
-        SetCartridgeStatusToEAX(status);
+        return DiskStat[OLD_DISK_STATUS_OFFSET];
     }
 }
 
@@ -513,17 +649,6 @@ void HandleDriveChanging() {
 void SetCartridgeStatusToEAX(long eax) {
     long PriorStatus = CartridgeStatus;
     CartridgeStatus = eax;
-
-    /**************************************************************************
-     * Added by MLT
-     */
-    // Avoid flickering
-    static long LastCartridgeStatus = -1;
-    if (LastCartridgeStatus == CartridgeStatus) {
-        return;
-    }
-    LastCartridgeStatus = CartridgeStatus;
-    /**************************************************************************/
 
     // Set the text of the "action initiate button"
     const char *esi = 0;
@@ -666,18 +791,18 @@ void BumpErrorCounts(long ErrorCode) {
 /*******************************************************************************
  * EJECT IOMEGA CARTRIDGE
  *******************************************************************************/
-void EjectIomegaCartridge() {
+void EjectIomegaCartridge(int Device) {
     // Could NOT do it through the IOCTL layer ... so eject with SCSI
     // make sure the media is not locked...
     char Scsi[6] = {0};
     Scsi[0] = SCSI_Cmd_PreventAllow;
-    SCSICommand(CurrentDevice, Scsi, 0, 0);
+    SCSICommand(Device, Scsi, 0, 0);
     // issue an Asynchronous STOP command to induce spindown and ejection
     memset(Scsi, 0, sizeof(Scsi));
     Scsi[0] = SCSI_Cmd_StartStopUnit;
     Scsi[1] = 1; // Set the IMMED bit for offline
     Scsi[4] = 2; // eject a Jaz disk after stopping
-    SCSICommand(CurrentDevice, Scsi, 0, 0);
+    SCSICommand(Device, Scsi, 0, 0);
 }
 
 /*******************************************************************************
@@ -883,7 +1008,7 @@ GetOut:
     free(pUserDataBuffer);
 
     TestingPhase = UNTESTED;
-    UnlockCurrentDrive();
+    UnlockAllMedia();
     SetErrorRecovery(true, true, false); // reenable Retries & ECC
     SetWindowText(hTestButton, szPressToStart);
     CartridgeStatus = DISK_AT_SPEED;

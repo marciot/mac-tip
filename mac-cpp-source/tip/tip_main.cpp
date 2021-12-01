@@ -43,7 +43,7 @@ void OpenExplanationInSimpleText();
 
 const Point mainWndOrigin = SET_POINT(0, 40);
 
-void run_tip(int id) {
+void run_tip() {
     RgnHandle cursorRgn = NewRgn();
 
     NewTipWindow();
@@ -59,7 +59,19 @@ void run_tip(int id) {
                 printf("Starting tip\n");
                 // Start TIP as soon as the user dismisses the intro screen
                 inited = true;
-                WinMain(id);
+                uint8_t drivesSkipped;
+                WinMain(&drivesSkipped);
+                if(drivesSkipped) {
+                    const char *s = drivesSkipped > 1 ? "s" : "";
+                    if(ShowAlert(YN_DLG,
+                        "Found media in %d drive%s. If you wish to test that "
+                        "media, you must quit to the Finder and eject it "
+                        "prior to running TIP. Would you like to do so?",
+                            drivesSkipped, s
+                        ) == 1) {
+                        gDone = true;
+                    }
+                }
             }
         }
         if(timerEnabled) {
@@ -93,7 +105,9 @@ void NewTipWindow() {
         NewCWindow(NULL,&rect, title, true, 0, (WindowPtr)-1, true, 0) :
         NewWindow(NULL,&rect,  title, true, 0, (WindowPtr)-1, true, 0);
 
-    GetDC(hMainWnd);
+    SetPort(tipWindow);
+    SetBackColor(BACK_COLOR);
+    EraseRect(&tipWindow->portRect);
 
     TextSize(10);
 
@@ -107,9 +121,8 @@ void NewTipWindow() {
             tipBtns[i].y + tipBtns[i].h - mainWndOrigin.v
         );
         StrToPascal(title, tipBtns[i].name);
-        tipBtns[i].hndl = NewControl(tipWindow, &rect, title, true, 0, 0, 0, 0, tipBtns[i].id);
+        tipBtns[i].hndl = NewControl(tipWindow, &rect, title, false, 0, 0, 0, 0, tipBtns[i].id);
     }
-    ReleaseDC(hMainWnd);
 
     page = kExplainPage;
     GetDC(hExplainWnd);
@@ -148,6 +161,9 @@ bool PrepareDC(int which) {
             break;
         case hMainWnd:
             SetOrigin(mainWndOrigin.h,  mainWndOrigin.v);
+            break;
+        case hDefault:
+            SetOrigin(0, 0);
             break;
     }
     return true;
@@ -291,28 +307,28 @@ void SetPage(TipPage newPage) {
     page = newPage;
     switch(page) {
         case kTestingPage:
-            ShowWindow(IDB_TEST, SW_SHOW);
+            ShowWindow((*richText)->scroll, SW_HIDE);
             ShowWindow(IDB_BACK, SW_HIDE);
             ShowWindow(IDB_NEXT, SW_HIDE);
-            ShowWindow(IDB_EXPL, SW_SHOW);
             ShowWindow(IDB_OKAY, SW_HIDE);
-            ShowWindow(IDB_QUIT, SW_SHOW);
             ShowWindow(IDB_READ, SW_HIDE);
-            HideControl((*richText)->scroll);
+            ShowWindow(IDB_TEST, SW_SHOW);
+            ShowWindow(IDB_EXPL, SW_SHOW);
+            ShowWindow(IDB_QUIT, SW_SHOW);
             break;
         case kExplainPage:
             ShowWindow(IDB_TEST, SW_HIDE);
             ShowWindow(IDB_BACK, SW_HIDE);
             ShowWindow(IDB_NEXT, SW_HIDE);
             ShowWindow(IDB_EXPL, SW_HIDE);
-            ShowWindow(IDB_OKAY, SW_SHOW);
             ShowWindow(IDB_QUIT, SW_HIDE);
+            ShowWindow(IDB_OKAY, SW_SHOW);
             ShowWindow(IDB_READ, SW_SHOW);
-            ShowControl((*richText)->scroll);
+            ShowWindow((*richText)->scroll, SW_SHOW);
             TBSetScroll(richText, 0);
             break;
     }
-    InvalidateRect(hMainWnd);
+    InvalidateRect(hDefault);
 }
 
 /*******************************************************************************
@@ -394,14 +410,10 @@ void OpenExplanationInSimpleText() {
  *******************************************************************************/
 
 void SetRichEditText(const char *name) {
-    short fRefNum = 0;
-
     // Don't reload a file that is already loaded
 
     if(textFileName == name) return;
     textFileName = name;
-
-    printf("Loading explanation file \"%s\"\n", name);
 
     // Get the specification for the explanation file
 
@@ -409,27 +421,33 @@ void SetRichEditText(const char *name) {
     OSErr err = GetExplanationFSSpec(textFileName, &docSpec);
     if(err != noErr) return;
 
-    // Load the text from the data fork
+    // Load the text from the file
+
+    TBReadSimpleText(richText, &docSpec);
 
     if (name != szRunning && name != szNotRunning) {
         SetPage(kExplainPage);
+    } else {
+        InvalidateRect(hDefault);
     }
-
-    TBReadSimpleText(richText, &docSpec);
 }
 
 /*******************************************************************************
  * SET COLOR
  *******************************************************************************/
 
+void SetRGBColor(long color, RGBColor *rgbColor) {
+    if(color == BACK_COLOR) color = LTGRAY_COLOR;
+    // Use colors when available
+    rgbColor->red   = (color & 0xFF0000) >> 8;
+    rgbColor->green = (color & 0x00FF00) >> 0;
+    rgbColor->blue  = (color & 0x0000FF) << 8;
+}
+
 void SetColor(long color) {
     if (allowColor) {
-        if(color == BACK_COLOR) color = LTGRAY_COLOR;
-        // Use colors when available
         RGBColor rgbColor;
-        rgbColor.red   = (color & 0xFF0000) >> 8;
-        rgbColor.green = (color & 0x00FF00) >> 0;
-        rgbColor.blue  = (color & 0x0000FF) << 8;
+        SetRGBColor(color, &rgbColor);
         RGBForeColor(&rgbColor);
      } else {
         // Use patterns for B&W Macs
@@ -462,6 +480,14 @@ void SetColor(long color, long monoColor) {
     } else {
         SetColor(monoColor);
     }
+}
+
+void SetBackColor(long color) {
+    if (allowColor) {
+        RGBColor rgbColor;
+        SetRGBColor(color, &rgbColor);
+        RGBBackColor(&rgbColor);
+     }
 }
 
 /*******************************************************************************
@@ -587,9 +613,9 @@ void SetWindowText(int id, const char *str) {
     StrToPascal(pStr, str);
     ControlHandle hCntl = FindControl(id);
     if(hCntl) {
-        GetDC(hMainWnd);
+        GetDC(hDefault);
         SetCTitle(hCntl, pStr);
-        ReleaseDC(hMainWnd);
+        ReleaseDC(hDefault);
     }
 }
 
@@ -599,24 +625,27 @@ void SetWindowText(int id, const char *str) {
 void EnableWindow(int id, bool enabled) {
     ControlHandle hCntl = FindControl(id);
     if(hCntl) {
-        GetDC(hMainWnd);
+        GetDC(hDefault);
         HiliteControl(hCntl, enabled ? 0 : 255);
-        ReleaseDC(hMainWnd);
+        ReleaseDC(hDefault);
     }
 }
 
 /*******************************************************************************
  * SHOW WINDOW
  *******************************************************************************/
+void ShowWindow(ControlHandle hCntl, int state) {
+    // Show/hide a control by invalidating, rather than drawing it
+    (*hCntl)->contrlVis = (state == SW_SHOW) ? 255 : 0;
+    InvalRect(&(*hCntl)->contrlRect);
+}
+
 void ShowWindow(int id, int state) {
     ControlHandle hCntl = FindControl(id);
     if(hCntl) {
-        GetDC(hMainWnd);
-        if(state == SW_SHOW)
-            ShowControl(hCntl);
-        else
-            HideControl(hCntl);
-        ReleaseDC(hMainWnd);
+        GetDC(hDefault);
+        ShowWindow(hCntl, state);
+        ReleaseDC(hDefault);
     }
 }
 

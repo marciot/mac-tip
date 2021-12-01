@@ -10,7 +10,7 @@
 #include "iomega_cmds.h"
 
 bool process_command();
-void confirm_run_tip(int id);
+void confirm_run_tip();
 void printn( unsigned char *c, int n );
 void print_help();
 void scan_bus();
@@ -60,7 +60,7 @@ bool process_command() {
         case 'i': dev_info(arg_val); break;
         case 'v': mac_list_volumes(); break;
         case 'u': mac_unmount(arg_val); break;
-        case 't': confirm_run_tip(arg_val); break;
+        case 't': confirm_run_tip(); break;
         case 'q': return false;
         case 'o': SetRichEditText(arg_str); break;
         default: printf("Unknown command, type 'h' for help\n");
@@ -68,12 +68,12 @@ bool process_command() {
     return true;
 }
 
-void confirm_run_tip(int id) {
+void confirm_run_tip() {
     char cmd[80];
     printf("\nThis program is in BETA TESTING and may cause severe data loss!\n\nProceed [Y/N]? ");
     gets( cmd );
     if(tolower(cmd[0]) == 'y') {
-        run_tip(id);
+        run_tip();
     }
     printf("\n\nYou may need to REBOOT your Mac before cartridges are recognized by Mac OS.");
 }
@@ -96,7 +96,7 @@ void print_help() {
         "\nIomega device operations on SCSI device:\n"
         "  spin    [n] : spin up a cartridge\n"
         "  eject   [n] : eject cartridge\n"
-        "  tip     [n] : run Steve Gibson's TIP 2.1\n"
+        "  tip         : run Steve Gibson's TIP 2.1\n"
     );
 }
 

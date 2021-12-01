@@ -2,7 +2,7 @@
 
 extern WindowPtr tipWindow;
 
-void run_tip(int id);
+void run_tip();
 
 #define MINIMUM_JAZ_SPARES 500
 #define MAXIMUM_JAZ_SPARES 2557
@@ -14,7 +14,7 @@ extern long DriveCount;
 extern long JazDrive; // true if the current drive
 extern long CartridgeStatus;
 extern long LastLBAOnCartridge;
-extern unsigned long StartingInstant;
+extern uint32_t StartingInstant;
 extern long NumberOfLBAs;
 extern long Side_0_SparesCount; // JAZ has only one count
 extern long Side_1_SparesCount; // ZIP has counts for both sides
@@ -34,22 +34,38 @@ extern bool UserInterrupt;
 extern long LastError;
 extern long SingleTransferLBA;
 
+//-------------------------- Drive Array Status Flags ---------------------------
+
+#define JAZ_DRIVE             0x01
+#define MEDIA_CHANGED         0x02
+#define DISK_EJECTING         0x04 // we've asked for eject and waiting ...
+#define ODD_BYTE_COMPENSATION 0x08 // special handling for ODD length PSWD
+#define MOUNTED_DRIVE         0x10 // drive was mounted at startup, ignore it
+#define MAX_DRIVE_COUNT       8    // we can handle up to 8 Zip/Jaz drives
+
+struct DriveEntry {
+    uint8_t flags;
+    uint8_t scsi_id;
+};
+
+extern DriveEntry DriveArray[MAX_DRIVE_COUNT];
+
 // ----------------------- Macintosh Compatibility -----------------------
 
 enum AlertTypes {
-	ERR_DLG,
-	YN_DLG
+    ERR_DLG,
+    YN_DLG
 };
 
 enum {
-	BACK_COLOR	 = -1,
-	BLACK_COLOR	 = 0x000000,
-	LTGRAY_COLOR = 0xc0c0c0,
-	GRAY_COLOR	 = 0x808080,
-	WHITE_COLOR	 = 0xffffff,
-	BLUE_COLOR	 = 0x0000ff,
-	RED_COLOR	 = 0xff0000,
-	GREEN_COLOR	 = 0x00ff00,
+    BACK_COLOR   = -1,
+    BLACK_COLOR  = 0x000000,
+    LTGRAY_COLOR = 0xc0c0c0,
+    GRAY_COLOR   = 0x808080,
+    WHITE_COLOR  = 0xffffff,
+    BLUE_COLOR   = 0x0000ff,
+    RED_COLOR    = 0xff0000,
+    GREEN_COLOR  = 0x00ff00,
 };
 
 #define BDR_SUNKENOUTER 1
@@ -59,8 +75,10 @@ enum {
 #define SW_SHOW 1
 #define SW_HIDE 2
 
+void SetRGBColor(long color, RGBColor *rgbColor);
 void SetColor(long color);
 void SetColor(long color, long monoColor);
+void SetBackColor(long color);
 void DrawLed(int x, int y, long color);
 void StrToPascal(Str255 pStr, const char *str);
 int ShowAlert(AlertTypes type, const char* format, ...);
@@ -71,6 +89,7 @@ void TextOut(int x, int y, const char *str);
 void TextOutCentered(int x, int y, int w, int h, const char *str);
 void SetWindowText(int id, const char *str);
 void EnableWindow(int id, bool enabled);
+void ShowWindow(ControlHandle hCntl, int state);
 void ShowWindow(int id, int state);
 void InvalidateRect(int id);
 void Rectangle(int left, int top, int right, int bottom);
@@ -81,42 +100,42 @@ void PostQuitMessage();
 unsigned long GetSystemTime();
 bool PrepareDC(int which);
 
-#define GetDC(h)	 {GrafPtr oldPort; \
-					 GetPort(&oldPort); \
-					 if(PrepareDC(h)) {
+#define GetDC(h)     {GrafPtr oldPort; \
+                     GetPort(&oldPort); \
+                     if(PrepareDC(h)) {
 
 #define ReleaseDC(h) } SetOrigin(0,0); \
-					 SetPort(oldPort);}
+                     SetPort(oldPort);}
 
 
-// ------------------------------	Cartridge Status -------------------------------
+// ------------------------------   Cartridge Status -------------------------------
 
 enum {
-	DISK_STATUS_UNKNOWN	 = 1,
-	DISK_AT_SPEED		 = 2,
-	DISK_SPINNING_UP	 = 3,
-	DISK_NOT_PRESENT	 = 4,
-	DISK_SPUN_DOWN		 = 5,
-	DISK_STALLED		 = 6,
-	DISK_Z_TRACK_FAILURE = 7,
-	DISK_PROTECTED		 = 8,
-	DISK_LOW_SPARES		 = 9,
-	DISK_TEST_UNDERWAY	 = 10,
-	DISK_TEST_FAILURE	 = 11,
+    DISK_STATUS_UNKNOWN  = 1,
+    DISK_AT_SPEED        = 2,
+    DISK_SPINNING_UP     = 3,
+    DISK_NOT_PRESENT     = 4,
+    DISK_SPUN_DOWN       = 5,
+    DISK_STALLED         = 6,
+    DISK_Z_TRACK_FAILURE = 7,
+    DISK_PROTECTED       = 8,
+    DISK_LOW_SPARES      = 9,
+    DISK_TEST_UNDERWAY   = 10,
+    DISK_TEST_FAILURE    = 11,
 
-	LAST_CART_STATUS	 = 11
+    LAST_CART_STATUS     = 11
 };
 
 // ---------------------------- Testing Phase Status -----------------------------
 
 enum {
-	UNTESTED			  = 0,
-	READY_TO_TEST		  = 1,
-	TESTING_STARTUP		  = 2,
-	READING_DATA		  = 3,
-	WRITING_PATT		  = 4,
-	READING_PATT		  = 5,
-	WRITING_DATA		  = 6
+    UNTESTED              = 0,
+    READY_TO_TEST         = 1,
+    TESTING_STARTUP       = 2,
+    READING_DATA          = 3,
+    WRITING_PATT          = 4,
+    READING_PATT          = 5,
+    WRITING_DATA          = 6
 };
 
 /*******************************************************************************
@@ -195,15 +214,6 @@ extern const char *szBack;
 extern const char *szNext;
 extern const char *szQuit;
 
-enum {
-	hMainWnd,
-	hTestMonitor,
-	hTestButton,
-	hExitButton,
-	// Extras added by MLT
-	hExplainWnd
-};
-
 #define IDB_BACK 0xFF00
 #define IDB_NEXT 0xFF01
 #define IDB_QUIT 0xFF02
@@ -212,14 +222,24 @@ enum {
 #define IDB_OKAY 0xFF05
 #define IDB_READ 0xFF06
 
+enum {
+    hDefault,
+    hMainWnd,
+    hTestMonitor,
+    hTestButton = IDB_TEST,
+    hExitButton = IDB_QUIT,
+    // Extras added by MLT
+    hExplainWnd = IDB_EXPL
+};
+
 typedef struct {
-	int id;
-	const char *name;
-	int x;
-	int y;
-	int w;
-	int h;
-	ControlHandle hndl;
+    int id;
+    const char *name;
+    int x;
+    int y;
+    int w;
+    int h;
+    ControlHandle hndl;
 } BtnList;
 extern BtnList tipBtns[];
 
@@ -246,15 +266,16 @@ void PreventProgramExit();
 void AllowProgramExit();
 void ErrorSound();
 void ProcessPendingMessages();
-void WinMain(int Device);
+void WinMain(uint8_t *DrivesSkipped);
 void WndProc(long iMessage, uint16_t wParam);
 void TestMonitorWndProc();
 void ApplicationTimerProc();
 void TestButtonClicked();
 
+int GetDriveEntryOffset(short Device);
 void GetCommandDetails(char command, char &cmd_flags, char &cmd_length);
 long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen);
-void EnumerateIomegaDevices(long Device);
+long EnumerateIomegaDevices(uint8_t *DrivesSkipped);
 long GetModePage(short Device, short PageToGet, void *pBuffer, short BufLen);
 long SetModePage(short Device, void *pBuffer);
 void ModifyModePage(char *PageBuff, char eec, char retries);
@@ -262,10 +283,14 @@ void SetErrorRecovery(bool Retries, bool ECC, bool Testing);
 long GetNonSenseData(short Device, short DataPage, void *Buffer, short BufLen);
 long LockCurrentDrive();
 long UnlockCurrentDrive();
+void UnlockAllMedia();
 long SpinUpIomegaCartridge(short Device);
+void EjectAllMedia();
 long GetSpareSectorCounts(char);
+uint8_t GetCartridgeStatus(long Device);
 void HandleDriveChanging();
 void SetCartridgeStatusToEAX(long eax);
+void EjectIomegaCartridge(int Device);
 long PerformRegionTransfer(short XferCmd, void *pBuffer);
 void TestTheDisk();
 long GetElapsedTimeInSeconds();
