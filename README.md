@@ -74,20 +74,21 @@ for vintage Macs. If you have a project in mind, please hit me up via my
 Unmounting volumes
 ------------------
 
-**To avoid data corruption, you must "unmount" the cartridge prior to
+**To avoid data corruption, a cartridge must be unmounted prior to
 starting a test with TIP!** 
 
-There is no way to unmount a cartridge (without also ejecting it) in the
-Finder, but you can either:
+The best way to accomplish this is to start TIP without a disk in the drive you want to test.
+Then, insert the cartridge at the testing screen which indicates "Awaiting media...". TIP
+will recognize it if Mac OS mounts newly inserted cartridge and will give you the choice to
+unmount it.
 
-1) Start TIP without a disk in the drive. TIP will recognize when Mac OS mounts newly inserted cartridges and will give you the choice to unmount it.
-2) Use the command console to unmount a disk **prior to** starting TIP
+Alternatively, you can use the command line to unmount a disk **prior to** starting TIP.
 
 <details>
-<summary>Click here to learn how to use the Command Console</summary></br>
+<summary>Click here to learn how to use the command line</summary></br>
 
-The Command Console shows up when you first start the program. This is a
-unique feature of this port and is not present in the original TIP:
+The command line is accessible by selecting run "Run Command Line..." from the "Advanced"
+menu. This is a unique feature of this port and is not present in the original TIP:
 
 ![Command Line][mac-screenshot2]
 
@@ -104,15 +105,10 @@ cartridge will remain in the drive. To unmount a drive:
 *The unmount process will fail if you have any open files or applications in
 the volume; if this happens, close those files and try again.*
 
-### Starting TIP
-
-To start TIP, you will need to tell it which SCSI device to use:
+### Listing SCSI devices
 
 * Type `list` to show a numbered list of all SCSI devices by SCSI ID.
-* Type `tip` followed by a SCSI ID to run TIP on that device.
 
-Future versions of this tool may eliminate the Command Console, if I can find
-the right way to automate all these steps in MacOS :grin:
 </details>
 
 About the code
