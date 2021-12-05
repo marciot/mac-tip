@@ -130,6 +130,9 @@ bool TBMouseDown( TBHandle tb, Point where, WindowPtr whichWindow ) {
     HLock( (Handle) tb );
     TBRec &my = **tb;
 
+    // Return if hidden
+    if((*my.scroll)->contrlVis == 0) return 0;
+
     ControlHandle   whichCntl;
     short partCode = FindControl(where, whichWindow, &whichCntl);
     if (partCode) {

@@ -43,7 +43,7 @@ void DoMouseDown(EventRecord &event);
 void DoMouseMove(EventRecord &event, RgnHandle *cursorRegion);
 void DoDiskEvent(EventRecord &event);
 void SetPage(TipPage page);
-ControlHandle FindControl(int id);
+ControlHandle FindCntlHandle(int id);
 OSErr GetExplanationFSSpec(const char *name, FSSpec *docSpec);
 void OpenExplanationInSimpleText();
 
@@ -131,8 +131,10 @@ void NewTipWindow() {
             tipBtns[i].y + tipBtns[i].h - mainWndOrigin.v
         );
         StrToPascal(title, tipBtns[i].name);
-        tipBtns[i].hndl = NewControl(tipWindow, &rect, title, false, 0, 0, 0, 0, tipBtns[i].id);
+        tipBtns[i].hndl = NewControl(tipWindow, &rect, title, false, 0, 0, 1, tipBtns[i].type, tipBtns[i].id);
     }
+
+    SetControlValue(FindCntlHandle(IDB_BEEP),1); // Check the sound control
 
     page = kExplainPage;
     GetDC(hExplainWnd);
@@ -176,7 +178,7 @@ void DisposeTipWindow() {
     DisposeWindow(tipWindow);
 }
 
-ControlHandle FindControl(int id) {
+ControlHandle FindCntlHandle(int id) {
     for(int i = 0; tipBtns[i].name; i++) {
         if (tipBtns[i].id == id)
             return tipBtns[i].hndl;
@@ -309,11 +311,12 @@ void DoMouseDown(EventRecord &event) {
                 GetPort(&oldPort);
                 SetPort(thisWindow);
                 GlobalToLocal(&mouse);
-                const bool hitButton = (!TBMouseDown(richText, mouse, thisWindow)) &&
-                                       (FindControl(mouse, thisWindow, &thisControl) == inButton) &&
-                                       (TrackControl(thisControl, mouse, 0) == inButton);
+                int part;
+                const bool hitCntl = (!TBMouseDown(richText, mouse, thisWindow)) &&
+                                       (FindControl(mouse, thisWindow, &thisControl)) &&
+                                       (part = TrackControl(thisControl, mouse, 0));
                 SetPort(oldPort);
-                if(hitButton) {
+                if(hitCntl && (part == inButton) || (part == inCheckBox)) {
                     int id = GetControlReference(thisControl);
                     switch(id) {
                         case IDB_OKAY:
@@ -324,6 +327,12 @@ void DoMouseDown(EventRecord &event) {
                             break;
                         case IDB_READ:
                             OpenExplanationInSimpleText();
+                            break;
+                        case IDB_BEEP:
+                            SetPort(thisWindow);
+                            SetControlValue(thisControl, 1 - GetControlValue(thisControl));
+                            SetPort(oldPort);
+                            printf("Value: %d\n", GetControlValue(thisControl));
                             break;
                         default:
                             WndProc(WM_COMMAND, id);
@@ -407,6 +416,7 @@ void SetPage(TipPage newPage) {
             ShowWindow(IDB_TEST, SW_SHOW);
             ShowWindow(IDB_EXPL, SW_SHOW);
             ShowWindow(IDB_QUIT, SW_SHOW);
+            ShowWindow(IDB_BEEP, SW_SHOW);
             break;
         case kExplainPage:
             ShowWindow(IDB_TEST, SW_HIDE);
@@ -414,6 +424,7 @@ void SetPage(TipPage newPage) {
             ShowWindow(IDB_NEXT, SW_HIDE);
             ShowWindow(IDB_EXPL, SW_HIDE);
             ShowWindow(IDB_QUIT, SW_HIDE);
+            ShowWindow(IDB_BEEP, SW_HIDE);
             ShowWindow(IDB_OKAY, SW_SHOW);
             ShowWindow(IDB_READ, SW_SHOW);
             ShowWindow((*richText)->scroll, SW_SHOW);
@@ -703,7 +714,7 @@ unsigned long GetSystemTime() {
 void SetWindowText(int id, const char *str) {
     Str255 pStr;
     StrToPascal(pStr, str);
-    ControlHandle hCntl = FindControl(id);
+    ControlHandle hCntl = FindCntlHandle(id);
     if(hCntl) {
         GetDC(hDefault);
         SetCTitle(hCntl, pStr);
@@ -715,7 +726,7 @@ void SetWindowText(int id, const char *str) {
  * ENABLE WINDOW
  *******************************************************************************/
 void EnableWindow(int id, bool enabled) {
-    ControlHandle hCntl = FindControl(id);
+    ControlHandle hCntl = FindCntlHandle(id);
     if(hCntl) {
         GetDC(hDefault);
         HiliteControl(hCntl, enabled ? 0 : 255);
@@ -733,12 +744,25 @@ void ShowWindow(ControlHandle hCntl, int state) {
 }
 
 void ShowWindow(int id, int state) {
-    ControlHandle hCntl = FindControl(id);
+    ControlHandle hCntl = FindCntlHandle(id);
     if(hCntl) {
         GetDC(hDefault);
         ShowWindow(hCntl, state);
         ReleaseDC(hDefault);
     }
+}
+
+/*******************************************************************************
+ * SEND MESSAGE
+ *******************************************************************************/
+long SendMessage(int id, int msg) {
+    if(msg == BM_GETCHECK) {
+        ControlHandle hCntl = FindCntlHandle(id);
+        if(hCntl) {
+            return GetControlValue(hCntl) ? BST_CHECKED: 0;
+        }
+    }
+    return 0;
 }
 
 /*******************************************************************************

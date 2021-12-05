@@ -74,6 +74,8 @@ enum {
 #define WM_COMMAND 2
 #define SW_SHOW 1
 #define SW_HIDE 2
+#define BM_GETCHECK 1
+#define BST_CHECKED 1
 
 void SetRGBColor(long color, RGBColor *rgbColor);
 void SetColor(long color);
@@ -91,6 +93,7 @@ void SetWindowText(int id, const char *str);
 void EnableWindow(int id, bool enabled);
 void ShowWindow(ControlHandle hCntl, int state);
 void ShowWindow(int id, int state);
+long SendMessage(int id, int msg);
 void InvalidateRect(int id);
 void Rectangle(int left, int top, int right, int bottom);
 void DrawEdge(Rect *qrc, int edge, int grfFlags);
@@ -221,6 +224,7 @@ extern const char *szQuit;
 #define IDB_EXPL 0xFF04
 #define IDB_OKAY 0xFF05
 #define IDB_READ 0xFF06
+#define IDB_BEEP 0xFF07
 
 enum {
     hDefault,
@@ -228,6 +232,7 @@ enum {
     hTestMonitor,
     hTestButton = IDB_TEST,
     hExitButton = IDB_QUIT,
+    hSoundCheckbox,
     // Extras added by MLT
     hExplainWnd = IDB_EXPL
 };
@@ -239,9 +244,12 @@ typedef struct {
     int y;
     int w;
     int h;
+    int type;
     ControlHandle hndl;
 } BtnList;
 extern BtnList tipBtns[];
+
+extern Rect CS_Stat, TP_Perc, SS_Jaz, SS_Sid0, TL_Sect, ES_Read, SE_Rect;
 
 /*******************************************************************************
  * FUNCTION PROTOTYPES

@@ -162,7 +162,33 @@ TextList TestGrayText[] = {
     {155,  39, "Testing Progress"},
     {129,  77, "Spare Sectors Consumed"},
     {61,  135, "Testing Location"},
-    /*{219, 135, "Sound"},*/
+    {219, 135, "Sound"},
     {297, 135, "Error Summary"},
     {0,0,0}
+};
+
+
+// ----------------------- Test Monitor Panel Definitions   -------------------
+
+#define SET_RECT(LEFT, TOP, RIGHT, BOTTOM) {TOP, LEFT, BOTTOM, RIGHT}
+
+Rect CS_Stat = SET_RECT(114,  8,  242,  28);
+Rect TP_Perc = SET_RECT( 12,  56, 409,  72);
+Rect SS_Jaz  = SET_RECT( 12,  94, 409, 126);
+Rect SS_Sid0 = SET_RECT( 12,  94, 409, 110);
+Rect TL_Sect = SET_RECT( 75, 154, 203, 170);
+Rect ES_Read = SET_RECT(346, 154, 409, 170);
+Rect SE_Rect = SET_RECT(222, 154, 255, 221);
+
+BtnList tipBtns[] = {
+    {IDB_BACK, szBack, 157, 301, 80, 24},
+    {IDB_NEXT, szNext, 236, 301, 80, 24},
+    {IDB_QUIT, szQuit, 402, 301, 45, 24},
+    {IDB_BEEP, "", 252, 211, 22, 22, checkBoxProc},
+     // For Mac TIP only
+    {IDB_TEST, szPressToStart, 157, 301, 150, 24},
+    {IDB_EXPL, "Explain", 330, 301, 60, 24},
+    {IDB_OKAY, "Okay",    380, 301, 65, 24},
+    {IDB_READ, "Open in SimpleText...", 210, 301, 160, 24},
+    {0, 0, 0, 0, 0, 0}
 };
