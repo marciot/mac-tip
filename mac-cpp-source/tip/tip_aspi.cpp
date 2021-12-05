@@ -71,10 +71,10 @@ struct DEFECT_LIST_HEADER {
 
 #define DRIVE_A_SUPPORT_BIAS                 32 // reduce total by 32 for DRIVE A support
 
-#define BYTES_PER_SECTOR 512
-#define MAX_SECTORS_PER_TEST 25
+#define BYTES_PER_SECTOR                     512
+#define MAX_SECTORS_PER_TEST                 128
 
-#define BADNESS_THRESHOLD 10
+#define BADNESS_THRESHOLD                    10
 
 #define SS_ERR                               0x00000004
 #define DEFECT_LIST_READ_ERROR               0x001c0003
@@ -89,6 +89,7 @@ struct DEFECT_LIST_HEADER {
 
 #define CHECK_CONDITION 0x02
 
+TipPage CurrentPage;
 long CurrentDevice = -1; // the device that's been recognized
 long DriveCount = 0;
 
@@ -108,6 +109,7 @@ long TestingPhase = 0; // 0 = not testing, no data ...
 long PercentComplete;
 long FirstLBASector;
 long NumberOfLBAs;
+long AdapterMaxSectors;
 long LastLBAOnCartridge;
 long SecondsElapsed;
 long SoftErrors;
@@ -922,13 +924,24 @@ Exit:
  *******************************************************************************/
 
 void TestTheDisk() {
-    void *pPatternBuffer  = malloc(MAX_SECTORS_PER_TEST * BYTES_PER_SECTOR);
-    void *pUserDataBuffer = malloc(MAX_SECTORS_PER_TEST * BYTES_PER_SECTOR);
+    // setup the initital maximum tranfer ...
+    AdapterMaxSectors = MAX_SECTORS_PER_TEST; // limit to our max
 
-    if(pPatternBuffer == NULL || pUserDataBuffer == NULL) {
-        printf("Allocation error\n");
-        return;
+    void *pDataBuffer = 0;
+    for(;;) {
+        pDataBuffer = malloc(AdapterMaxSectors * BYTES_PER_SECTOR * 2);
+        if(pDataBuffer) break;
+        AdapterMaxSectors >>= 2; // we need to make it smaller
+        if(AdapterMaxSectors == 0) {
+            printf("Test buffer allocation failed!\n");
+            return;
+        }
     }
+
+    printf("Allocated buffer of %ld bytes\n", AdapterMaxSectors * BYTES_PER_SECTOR);
+
+    void *pPatternBuffer  = pDataBuffer;
+    void *pUserDataBuffer = (char*) pDataBuffer + AdapterMaxSectors * BYTES_PER_SECTOR;
 
     StopApplicationTimer();
 
@@ -950,7 +963,7 @@ void TestTheDisk() {
     do {
         ProcessPendingMessages();
 
-        NumberOfLBAs = MAX_SECTORS_PER_TEST;
+        NumberOfLBAs = AdapterMaxSectors;
 
         if(LastLBAOnCartridge) {
             if (FirstLBASector + NumberOfLBAs > LastLBAOnCartridge + 1) {
@@ -967,7 +980,7 @@ void TestTheDisk() {
 
         // get a random pattern of data to write
         const long DataPattern = rand();
-        memset(pPatternBuffer, DataPattern, MAX_SECTORS_PER_TEST * BYTES_PER_SECTOR);
+        memset(pPatternBuffer, DataPattern, AdapterMaxSectors * BYTES_PER_SECTOR);
 
         // update the cartridge's status
         GetSpareSectorCounts(false); // update the Cart's Condition
@@ -1005,8 +1018,7 @@ void TestTheDisk() {
     // show that we're post-test
 
 GetOut:
-    free(pPatternBuffer);
-    free(pUserDataBuffer);
+    free(pDataBuffer);
 
     TestingPhase = UNTESTED;
     UnlockAllMedia();
