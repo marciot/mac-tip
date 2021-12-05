@@ -17,17 +17,13 @@
 #include "tip.h"
 #include "command_line.h"
 
-enum TipPage {
-    kTestingPage,
-    kExplainPage,
-} page;
-
 static int           gDone;
 static bool          allowColor;
 static bool          inited = false;
 static bool          timerEnabled = false;
 static WindowPtr     tipWindow;
 static MenuHandle    tipMenu;
+static PicHandle     tipIntroPic;
 static TBHandle      richText;
 static const char   *textFileName;
 
@@ -58,15 +54,13 @@ void run_tip() {
 
     NewTipWindow();
     EnableWindow(hTestButton, false);
-    SetRichEditText(szInstructions);
 
     gDone = false;
     do {
         EventRecord event;
         if (WaitNextEvent(everyEvent, &event, GetCaretTime(), cursorRgn)) {
             DoEvent(event, &cursorRgn);
-            if(!inited && page == kTestingPage) {
-                printf("Starting tip\n");
+            if(!inited && CurrentPage == PERFORM_TEST_PAGE) {
                 // Start TIP as soon as the user dismisses the intro screen
                 inited = true;
                 uint8_t drivesSkipped;
@@ -136,7 +130,7 @@ void NewTipWindow() {
 
     SetControlValue(FindCntlHandle(IDB_BEEP),1); // Check the sound control
 
-    page = kExplainPage;
+    CurrentPage = EXPLAIN_RESULTS;
     GetDC(hExplainWnd);
 
     // Create the text edit widget
@@ -145,7 +139,10 @@ void NewTipWindow() {
 
     ReleaseDC(hExplainWnd);
 
-    SetPage(kTestingPage);
+    // Load the About box picture
+    tipIntroPic = GetPicture(128);
+
+    SetPage(INTRO_PAGE);
 }
 
 void AddTipMenus() {
@@ -189,11 +186,14 @@ ControlHandle FindCntlHandle(int id) {
 bool PrepareDC(int which) {
     SetPort(tipWindow);
     switch(which) {
+        case hIntroWnd:
+            if(CurrentPage != INTRO_PAGE) return false;
+            break;
         case hExplainWnd:
-            if(page != kExplainPage) return false;
+            if(CurrentPage != EXPLAIN_RESULTS) return false;
             break;
         case hTestMonitor:
-            if(page != kTestingPage) return false;
+            if(CurrentPage != PERFORM_TEST_PAGE) return false;
             SetOrigin(-20, -10);
             break;
         case hMainWnd:
@@ -320,10 +320,13 @@ void DoMouseDown(EventRecord &event) {
                     int id = GetControlReference(thisControl);
                     switch(id) {
                         case IDB_OKAY:
-                            SetPage(kTestingPage);
+                            SetPage(PERFORM_TEST_PAGE);
                             break;
                         case IDB_EXPL:
-                            SetPage(kExplainPage);
+                            SetPage(EXPLAIN_RESULTS);
+                            break;
+                        case IDB_NEXT:
+                            SetRichEditText(szInstructions);
                             break;
                         case IDB_READ:
                             OpenExplanationInSimpleText();
@@ -404,10 +407,21 @@ void StrToPascal(Str255 pStr, const char *str) {
 }
 
 void SetPage(TipPage newPage) {
-    if(page == newPage) return;
-    page = newPage;
-    switch(page) {
-        case kTestingPage:
+    if(CurrentPage == newPage) return;
+    CurrentPage = newPage;
+    switch(CurrentPage) {
+        case INTRO_PAGE:
+            ShowWindow(IDB_TEST, SW_HIDE);
+            ShowWindow(IDB_BACK, SW_HIDE);
+            ShowWindow(IDB_EXPL, SW_HIDE);
+            ShowWindow(IDB_BEEP, SW_HIDE);
+            ShowWindow(IDB_OKAY, SW_HIDE);
+            ShowWindow(IDB_READ, SW_HIDE);
+            ShowWindow((*richText)->scroll, SW_HIDE);
+            ShowWindow(IDB_QUIT, SW_SHOW);
+            ShowWindow(IDB_NEXT, SW_SHOW);
+            break;
+        case PERFORM_TEST_PAGE:
             ShowWindow((*richText)->scroll, SW_HIDE);
             ShowWindow(IDB_BACK, SW_HIDE);
             ShowWindow(IDB_NEXT, SW_HIDE);
@@ -418,7 +432,7 @@ void SetPage(TipPage newPage) {
             ShowWindow(IDB_QUIT, SW_SHOW);
             ShowWindow(IDB_BEEP, SW_SHOW);
             break;
-        case kExplainPage:
+        case EXPLAIN_RESULTS:
             ShowWindow(IDB_TEST, SW_HIDE);
             ShowWindow(IDB_BACK, SW_HIDE);
             ShowWindow(IDB_NEXT, SW_HIDE);
@@ -529,7 +543,7 @@ void SetRichEditText(const char *name) {
     TBReadSimpleText(richText, &docSpec);
 
     if (name != szRunning && name != szNotRunning) {
-        SetPage(kExplainPage);
+        SetPage(EXPLAIN_RESULTS);
     } else {
         InvalidateRect(hDefault);
     }
@@ -804,4 +818,17 @@ void ProcessPendingMessages() {
         DoEvent(event,NULL);
     }
     SystemTask();
+}
+
+/*******************************************************************************
+ * SPLASH THE BITMAP
+ *******************************************************************************/
+void SplashTheBitmap() {
+    GetDC(hIntroWnd);
+    if(tipIntroPic) {
+        Rect rect;
+        SetRect(&rect, 16, 18, 16+120, 18/*+258*/ +220);
+        DrawPicture(tipIntroPic, &rect);
+    }
+    ReleaseDC(hIntroWnd);
 }

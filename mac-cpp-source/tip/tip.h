@@ -4,11 +4,18 @@ extern WindowPtr tipWindow;
 
 void run_tip();
 
+typedef enum TipPage {
+    INTRO_PAGE,
+    PERFORM_TEST_PAGE,
+    EXPLAIN_RESULTS,
+} TipPage;
+
 #define MINIMUM_JAZ_SPARES 500
 #define MAXIMUM_JAZ_SPARES 2557
 #define MINIMUM_ZIP_SPARES 50
 #define MAXIMUM_ZIP_SPARES 126
 
+extern TipPage CurrentPage;
 extern long CurrentDevice;
 extern long DriveCount;
 extern long JazDrive; // true if the current drive
@@ -16,6 +23,7 @@ extern long CartridgeStatus;
 extern long LastLBAOnCartridge;
 extern uint32_t StartingInstant;
 extern long NumberOfLBAs;
+extern long AdapterMaxSectors;
 extern long Side_0_SparesCount; // JAZ has only one count
 extern long Side_1_SparesCount; // ZIP has counts for both sides
 extern long Initial_Side_0_Spares;
@@ -102,6 +110,8 @@ void StopApplicationTimer();
 void PostQuitMessage();
 unsigned long GetSystemTime();
 bool PrepareDC(int which);
+void SplashTheBitmap();
+void Paint3DHeadline();
 
 #define GetDC(h)     {GrafPtr oldPort; \
                      GetPort(&oldPort); \
@@ -144,6 +154,9 @@ enum {
 /*******************************************************************************
  * STRINGS
  *******************************************************************************/
+extern const char *szIntroTitle;
+extern const char *szIntroSubTitle;
+extern const char *szIntroText;
 
 extern const char *szWindowTitle;
 extern const char *szCopyright_1;
@@ -234,6 +247,7 @@ enum {
     hExitButton = IDB_QUIT,
     hSoundCheckbox,
     // Extras added by MLT
+    hIntroWnd = 5,
     hExplainWnd = IDB_EXPL
 };
 
@@ -275,6 +289,7 @@ void AllowProgramExit();
 void ErrorSound();
 void ProcessPendingMessages();
 void WinMain(uint8_t *DrivesSkipped);
+void Paint3DHeadline(const char *pszText, int Xleft, int Ytop);
 void WndProc(long iMessage, uint16_t wParam);
 void TestMonitorWndProc();
 void ApplicationTimerProc();

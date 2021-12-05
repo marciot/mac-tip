@@ -128,6 +128,21 @@ ErrorTypeList errorTypeList[] = {
     0, 0
 };
 
+/********** Main Window Controls Text ************/
+
+const char *szIntroTitle = "Trouble in Paradise";
+const char *szIntroSubTitle = "FREEWARE by Steve Gibson\r" \
+                              "Gibson Research Corporation\r" \
+                              "http://grc.com                  ( v 2.1b )\r" \
+                              "http://github.com/marciot/mac-tip";
+const char *szIntroText =
+    "A Macintosh port of \"TIP\" for Windows by Marcio Teixeira, made possible by a "
+    "generous code donation by Steve Gibson.\r\r"
+    "This freeware utility determines whether an Iomega Zip or Jaz drive is prone "
+    "to developing the dreaded \"Click of Death\" syndrome. Gibson's "
+    "research into the maintenance, repair and data recovery of Iomega's removable "
+    "media mass storage products led to this capability.";
+
 /****************** Control Text *****************/
 
 const char *szBack = "< Back";

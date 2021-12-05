@@ -8,6 +8,18 @@
 
 #include "tip.h"
 
+#define TITLE_TOP 11
+#define BODY_TOP 54
+#define BODY_LEFT 156
+#define BODY_RIGHT 445
+#define BODY_BOTTOM 280
+
+#define BODY_WIDTH (BODY_RIGHT - BODY_LEFT)
+#define BODY_HEIGHT (BODY_BOTTOM - BODY_TOP)
+
+#define LOGO_1_LEFT 157
+#define LOGO_1_TOP 57
+
 /*******************************************************************************
  * WinMain
  *
@@ -31,6 +43,22 @@ void WinMain(uint8_t *DrivesSkipped) {
 }
 
 /*******************************************************************************
+ * PAINT 3D HEADLINE
+ *******************************************************************************/
+void Paint3DHeadline(const char *pszText, int Xleft, int Ytop) {
+    TextSize(24);
+    TextFace(bold);
+    TextFont(helvetica);
+    SetColor(WHITE_COLOR);
+    TextOut(Xleft, Ytop, pszText);
+    SetColor(BLACK_COLOR);
+    TextOut(Xleft+1, Ytop+1, pszText);
+    TextFont(applFont);
+    TextFace(0);
+    TextSize(10);
+}
+
+/*******************************************************************************
  * WndProc
  *
  * This is the system's main window procedure
@@ -42,17 +70,80 @@ void WndProc(long iMessage, uint16_t wParam) {
     if (iMessage == WM_PAINT) {
         // Draw the Lower Horz Button Divider
 
+        GetDC(hMainWnd);
         SetColor(GRAY_COLOR);
         MoveTo(15, 289);
         LineTo(446, 289);
         SetColor(WHITE_COLOR);
         LineTo(446, 290);
         LineTo(14, 290);
+        ReleaseDC(hMainWnd);
+
+        // Draw the Gibson 'G' Logo
+        if(CurrentPage == INTRO_PAGE) {
+            GetDC(hIntroWnd);
+            SetColor(GRAY_COLOR);
+            MoveTo(LOGO_1_LEFT+1,  LOGO_1_TOP+29);
+            LineTo(LOGO_1_LEFT+14, LOGO_1_TOP+29);
+            LineTo(LOGO_1_LEFT+14, LOGO_1_TOP+0);
+            SetColor(WHITE_COLOR);
+            LineTo(LOGO_1_LEFT+12, LOGO_1_TOP+0);
+            LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+12);
+            LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+30);
+
+            SetColor(GRAY_COLOR);
+            MoveTo(LOGO_1_LEFT+18, LOGO_1_TOP+14);
+            LineTo(LOGO_1_LEFT+46, LOGO_1_TOP+14);
+            LineTo(LOGO_1_LEFT+46, LOGO_1_TOP+12);
+            LineTo(LOGO_1_LEFT+34, LOGO_1_TOP+0);
+            SetColor(WHITE_COLOR);
+            LineTo(LOGO_1_LEFT+17, LOGO_1_TOP+0);
+            LineTo(LOGO_1_LEFT+17, LOGO_1_TOP+15);
+
+            SetColor(GRAY_COLOR);
+            MoveTo(LOGO_1_LEFT+33, LOGO_1_TOP+46);
+            LineTo(LOGO_1_LEFT+46, LOGO_1_TOP+46);
+            LineTo(LOGO_1_LEFT+46, LOGO_1_TOP+29);
+            LineTo(LOGO_1_LEFT+34, LOGO_1_TOP+17);
+            SetColor(WHITE_COLOR);
+            LineTo(LOGO_1_LEFT+32, LOGO_1_TOP+17);
+            LineTo(LOGO_1_LEFT+32, LOGO_1_TOP+47);
+
+            SetColor(GRAY_COLOR);
+            MoveTo(LOGO_1_LEFT+1,  LOGO_1_TOP+35);
+            LineTo(LOGO_1_LEFT+12, LOGO_1_TOP+46);
+            LineTo(LOGO_1_LEFT+29, LOGO_1_TOP+46);
+            LineTo(LOGO_1_LEFT+29, LOGO_1_TOP+32);
+            SetColor(WHITE_COLOR);
+            LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+32);
+            LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+35);
+
+            // show the current logo bitmap
+            SplashTheBitmap();
+
+            // paint the 3D program title
+            Paint3DHeadline(szIntroTitle, BODY_LEFT, TITLE_TOP);
+
+            // now the rest of the stuff ...
+            SetColor(BLACK_COLOR);
+            #define WH_RECT(L,T,W,H) L, T, L + W, T + H
+
+            Rect rect;
+            SetRect(&rect, WH_RECT(221, BODY_TOP, 230, 60));
+            TETextBox(szIntroSubTitle, strlen(szIntroSubTitle), &rect, teFlushDefault);
+
+            SetRect(&rect, WH_RECT(BODY_LEFT, BODY_TOP+64, BODY_WIDTH, 115));
+            TETextBox(szIntroText, strlen(szIntroText), &rect, teFlushDefault);
+
+            ReleaseDC(hIntroWnd);
+        }
 
         // Paint the Copyright Notice
+        GetDC(hMainWnd);
         SetColor(GRAY_COLOR);
         TextOut(15, 298, szCopyright_1);
         TextOut(15, 311, szCopyright_2);
+        ReleaseDC(hMainWnd);
     }
     // -------------------------------------------------------------------------
     // WM_COMMAND : a button was pressed
