@@ -825,10 +825,11 @@ void ProcessPendingMessages() {
  *******************************************************************************/
 void SplashTheBitmap() {
     GetDC(hIntroWnd);
+    Rect rect;
+    SetRect(&rect, 16, 18, 16+120, 18/*+258*/ +220);
     if(tipIntroPic) {
-        Rect rect;
-        SetRect(&rect, 16, 18, 16+120, 18/*+258*/ +220);
         DrawPicture(tipIntroPic, &rect);
     }
+    DrawEdge(&rect, BDR_SUNKENOUTER, BF_RECT);
     ReleaseDC(hIntroWnd);
 }

@@ -82,39 +82,39 @@ void WndProc(long iMessage, uint16_t wParam) {
         // Draw the Gibson 'G' Logo
         if(CurrentPage == INTRO_PAGE) {
             GetDC(hIntroWnd);
-            SetColor(GRAY_COLOR);
+            SetColor(GRAY_COLOR,   GRAY_COLOR);
             MoveTo(LOGO_1_LEFT+1,  LOGO_1_TOP+29);
             LineTo(LOGO_1_LEFT+14, LOGO_1_TOP+29);
             LineTo(LOGO_1_LEFT+14, LOGO_1_TOP+0);
-            SetColor(WHITE_COLOR);
+            SetColor(WHITE_COLOR,  LTGRAY_COLOR);
             LineTo(LOGO_1_LEFT+12, LOGO_1_TOP+0);
             LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+12);
             LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+30);
 
-            SetColor(GRAY_COLOR);
+            SetColor(GRAY_COLOR,   GRAY_COLOR);
             MoveTo(LOGO_1_LEFT+18, LOGO_1_TOP+14);
             LineTo(LOGO_1_LEFT+46, LOGO_1_TOP+14);
             LineTo(LOGO_1_LEFT+46, LOGO_1_TOP+12);
             LineTo(LOGO_1_LEFT+34, LOGO_1_TOP+0);
-            SetColor(WHITE_COLOR);
+            SetColor(WHITE_COLOR,  LTGRAY_COLOR);
             LineTo(LOGO_1_LEFT+17, LOGO_1_TOP+0);
             LineTo(LOGO_1_LEFT+17, LOGO_1_TOP+15);
 
-            SetColor(GRAY_COLOR);
+            SetColor(GRAY_COLOR,   GRAY_COLOR);
             MoveTo(LOGO_1_LEFT+33, LOGO_1_TOP+46);
             LineTo(LOGO_1_LEFT+46, LOGO_1_TOP+46);
             LineTo(LOGO_1_LEFT+46, LOGO_1_TOP+29);
             LineTo(LOGO_1_LEFT+34, LOGO_1_TOP+17);
-            SetColor(WHITE_COLOR);
+            SetColor(WHITE_COLOR,  LTGRAY_COLOR);
             LineTo(LOGO_1_LEFT+32, LOGO_1_TOP+17);
             LineTo(LOGO_1_LEFT+32, LOGO_1_TOP+47);
 
-            SetColor(GRAY_COLOR);
+            SetColor(GRAY_COLOR,   GRAY_COLOR);
             MoveTo(LOGO_1_LEFT+1,  LOGO_1_TOP+35);
             LineTo(LOGO_1_LEFT+12, LOGO_1_TOP+46);
             LineTo(LOGO_1_LEFT+29, LOGO_1_TOP+46);
             LineTo(LOGO_1_LEFT+29, LOGO_1_TOP+32);
-            SetColor(WHITE_COLOR);
+            SetColor(WHITE_COLOR,  LTGRAY_COLOR);
             LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+32);
             LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+35);
 
