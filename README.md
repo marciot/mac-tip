@@ -160,7 +160,7 @@ his code in this repository with his permission.
 ![TIP Running on a Mac Plus][mac-plus]
 
 [GitHub account]: https://github.com/marciot
-[mac-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip1.png "Mac TIP Testing Screen"
+[mac-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip1.gif "Mac TIP Animation"
 [mac-screenshot2]: https://github.com/marciot/mac-tip/raw/main/images/mac-cmd.png "Mac TIP Command Line"
 [mac-screenshot3]: https://github.com/marciot/mac-tip/raw/main/images/mac-tip-cw8.png "Mac TIP Build Environment"
 [win-screenshot1]: https://github.com/marciot/mac-tip/raw/main/images/win-tip1.gif "Windows TIP About Screen"
