@@ -244,12 +244,12 @@ enum {
     hDefault,
     hMainWnd,
     hTestMonitor,
-    hTestButton = IDB_TEST,
-    hExitButton = IDB_QUIT,
-    hSoundCheckbox,
+    hTestButton    = IDB_TEST,
+    hExitButton    = IDB_QUIT,
+    hSoundCheckbox = IDB_BEEP,
     // Extras added by MLT
-    hIntroWnd = 5,
-    hExplainWnd = IDB_EXPL
+    hIntroWnd      = 5,
+    hExplainWnd    = IDB_EXPL
 };
 
 typedef struct {
