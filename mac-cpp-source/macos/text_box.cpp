@@ -192,7 +192,7 @@ void TBSetScroll( TBHandle tb, short scroll ) {
     my.lastV = scroll;
 }
 
-OSErr TBReadSimpleText( TBHandle tb, const FSSpec *docSpec) {
+OSErr TBReadSimpleText( TBHandle tb, const FSSpec *docSpec, bool redraw) {
     short fRefNum;
 
     TBSetScroll(tb, 0);
@@ -239,7 +239,7 @@ OSErr TBReadSimpleText( TBHandle tb, const FSSpec *docSpec) {
         Handle hStyle = Get1Resource('styl', 128);
         if (hStyle) {
             HNoPurge(hStyle);
-            TEUseStyleScrap(0, dataSize, (StScrpHandle) hStyle, true, my.tbox);
+            TEUseStyleScrap(0, dataSize, (StScrpHandle) hStyle, redraw, my.tbox);
             TECalText(my.tbox);
             ReleaseResource(hStyle);
         }

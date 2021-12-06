@@ -83,6 +83,7 @@ void run_tip() {
         }
     } while (!gDone);
 
+    EjectAllMedia();
     DisposeTipWindow();
     DisposeRgn(cursorRgn);
 }
@@ -540,7 +541,7 @@ void SetRichEditText(const char *name) {
 
     // Load the text from the file
 
-    TBReadSimpleText(richText, &docSpec);
+    TBReadSimpleText(richText, &docSpec, false);
 
     if (name != szRunning && name != szNotRunning) {
         SetPage(EXPLAIN_RESULTS);

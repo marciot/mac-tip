@@ -28,4 +28,4 @@ void TBUpdate( TBHandle html );
 void TBResize( TBHandle html, const Rect *r );
 void TBSetScroll( TBHandle html, short scroll );
 bool TBMouseDown( TBHandle html, Point where, WindowPtr whichWindow );
-OSErr TBReadSimpleText( TBHandle tb, const FSSpec *docSpec);
+OSErr TBReadSimpleText( TBHandle tb, const FSSpec *docSpec, bool redraw);

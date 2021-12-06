@@ -190,12 +190,14 @@ void GetCommandDetails(char command, char &cmd_flags, char &cmd_length) {
  * length to an IoBuffer for the command. It returns the complete
  * three-byte sense code from the command.
  *******************************************************************************/
-long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen) {
+long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, size_t IoBufLen) {
     char cmd_length, cmd_flags, cmd_status;
     GetCommandDetails(lpCmdBlk[0], cmd_flags, cmd_length);
     // call the SCSI interface to forward the command to the device
     OSErr err = scsi_cmd(Device, lpCmdBlk, cmd_length, lpIoBuf, IoBufLen, 0, cmd_flags, &cmd_status);
     if(err != noErr) {
+        // else, if it's *NOT* a "Sense Data" error (SS_ERR)
+        LastError = err | 0x00FFFF00; // [00 FF FF er]
         return SS_ERR;
     }
     if(cmd_status == 0) {
@@ -209,7 +211,7 @@ long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen) {
         printf("SCSI CHECK CONDITION (KEY %x, ASC %x, ASCQ %x)\n", sense_data.key, sense_data.asc, sense_data.ascq);
         // okay, we have an SS_ERR condition, let's check the SENSE DATA
         // assemble [00 ASC ASCQ SenseKey]
-        long res = (long(sense_data.asc) << 16) |
+        const long res = (long(sense_data.asc) << 16) |
                    (long(sense_data.ascq) << 8) |
                    (long(sense_data.key)      );
         if(res == MEDIA_CHANGE_CODE) {
@@ -217,7 +219,7 @@ long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen) {
             DriveArray[index].flags |= MEDIA_CHANGED;
             return 0;
         }
-        return 0;
+        return res;
     }
     else {
         // else, if it's *NOT* a "Sense Data" error (SS_ERR)
@@ -276,8 +278,7 @@ long EnumerateIomegaDevices(uint8_t *DrivesSkipped) {
 
             // On the Mac, we want to ignore drives that have media in them at
             // program entry, as this means the volume is mounted in Mac OS
-            JazDrive = isJaz;
-            const bool driveEmpty = (GetCartridgeStatus(Device) == DISK_NOT_PRESENT);
+            const bool driveEmpty = (GetCartridgeStatus(Device, flags) == DISK_NOT_PRESENT);
             if(driveEmpty) {
                 DriveArray[DriveCount].flags = flags;
                 DriveArray[DriveCount].scsi_id = Device;
@@ -573,10 +574,11 @@ Rescan:
         do {
             // clear media changed status
             DriveArray[i].flags &= ~MEDIA_CHANGED;
-            GetCartridgeStatus(scsi_id);
+            GetCartridgeStatus(scsi_id, DriveArray[i].flags);
         } while(DriveArray[i].flags & MEDIA_CHANGED); // do it until NO media change!
         //--------------------------------------------------------------------------
-        status = GetCartridgeStatus(scsi_id);
+        status = GetCartridgeStatus(scsi_id, DriveArray[i].flags);
+        if (status == DISK_STATUS_UNKNOWN) continue; // added by MLT
         // if the device we have is NOT the currently selected one
         if(scsi_id != CurrentDevice) {
             // if the disk is ANYTHING other than not present ...
@@ -592,6 +594,7 @@ Rescan:
                 // then set the current drive ...
                 else if ((DriveArray[i].flags & DISK_EJECTING) == 0) {
                     CurrentDevice = scsi_id;
+                    printf("Selected SCSI ID %ld\n", CurrentDevice);
                     TestingPhase = 0;
                     Selecting = true;
                     //goto Rescan;
@@ -607,13 +610,13 @@ Rescan:
             // it is *NOT* empty! If it *IS* empty, kill current
             if(status == DISK_NOT_PRESENT) {
                 CurrentDevice = -1;
-                SetCartridgeStatusToEAX(status);
+                SetCartridgeStatusToEAX(status, DriveArray[i].flags);
             }
             // if it's not already set correctly *and* either
             // the cart status is one of the pre-test ones, or
             // the NEW status from the cart is NOT "at speed" ...
             if((status != CartridgeStatus) && ((CartridgeStatus <= DISK_STALLED) || (status != DISK_AT_SPEED))) {
-                SetCartridgeStatusToEAX(status);
+                SetCartridgeStatusToEAX(status, DriveArray[i].flags);
             }
         }
     }
@@ -621,18 +624,18 @@ Rescan:
     if ((CurrentDevice == -1) &&
         (status == DISK_NOT_PRESENT) &&
         (CartridgeStatus != DISK_NOT_PRESENT)) {
-            SetCartridgeStatusToEAX(status);
+            SetCartridgeStatusToEAX(status, 0);
     }
 }
 
 //-----------------------------------------------------------------------------
 // GET CARTRIDGE STATUS
 //-----------------------------------------------------------------------------
-uint8_t GetCartridgeStatus(long Device) {
+uint8_t GetCartridgeStatus(long Device, uint8_t flags) {
     long eax;
     char DiskStat[72];
     #ifdef NO_EXCESS_READS
-        eax = GetNonSenseData(Device, DISK_STATUS_PAGE, DiskStat, JazDrive ? sizeof(DiskStat) : 63);
+        eax = GetNonSenseData(Device, DISK_STATUS_PAGE, DiskStat, (flags & JAZ_DRIVE) ? sizeof(DiskStat) : 63);
         if (eax) return DISK_STATUS_UNKNOWN;
     #else
         eax = GetNonSenseData(Device, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
@@ -649,7 +652,9 @@ uint8_t GetCartridgeStatus(long Device) {
 // SetCartridgeStatusToEAX
 //-----------------------------------------------------------------------------
 
-void SetCartridgeStatusToEAX(long eax) {
+void SetCartridgeStatusToEAX(long eax, uint8_t flags) {
+    JazDrive = flags & JAZ_DRIVE;
+
     long PriorStatus = CartridgeStatus;
     CartridgeStatus = eax;
 
@@ -785,7 +790,7 @@ void BumpErrorCounts(long ErrorCode) {
         LastError = eax;
     if (eax == 0x320003 || eax == 0x328F03)
         CartridgeStatus = DISK_LOW_SPARES;
-    if (eax & 0xFF == 1) // recovered error
+    if ((eax & 0xFF) == 1) // recovered error
         SoftErrors++;
     else
         HardErrors++;
@@ -953,12 +958,12 @@ void TestTheDisk() {
     InvalidateRect(hTestMonitor);
 
     LockCurrentDrive(); // prevent media removal
-
     GetSpareSectorCounts(false); // update the Cart's Condition
     UpdateRunTimeDisplay();
 
     // Standard Testing Operation
     StartingInstant = GetSystemTime();
+    long eax;
 
     do {
         ProcessPendingMessages();
@@ -989,7 +994,7 @@ void TestTheDisk() {
 
         UpdateRunTimeDisplay();
 
-        long eax = PerformRegionTransfer(SCSI_Cmd_ReadMany, pUserDataBuffer);
+        eax = PerformRegionTransfer(SCSI_Cmd_ReadMany, pUserDataBuffer);
 
         if(eax == 0) {
             // -------------------------------
@@ -1007,6 +1012,10 @@ void TestTheDisk() {
         }
         else if (eax == LBA_TOO_LARGE) {
             // if we hit the end of the disk ... exit gracefully!
+            goto GetOut;
+        }
+        else if (eax == SS_ERR) {
+            // added by MLT, exit on controller errors
             goto GetOut;
         }
         if (CartridgeStatus != DISK_TEST_UNDERWAY) {
@@ -1028,24 +1037,24 @@ GetOut:
     AllowProgramExit();
 
     // compute the number of serious troubles
-    const char *eax;
+    const char *result;
     long errors = FirmErrors + HardErrors;
     if (errors >= BADNESS_THRESHOLD) {
-        eax = szBadResult;
+        result = szBadResult;
     }
-    else if (UserInterrupt) {
-        eax = szInterrupted;
+    else if (UserInterrupt || (eax == SS_ERR)) {
+        result = szInterrupted;
     }
     else {
         // it wasn't interrupted, nor seriously bad, was it perfect?
         errors += SoftErrors;
         if(errors) {
-            eax = szExplainResult;
+            result = szExplainResult;
         } else {
-            eax = szPerfectResult;
+            result = szPerfectResult;
         }
     }
-    SetRichEditText(eax);
+    SetRichEditText(result);
     InvalidateRect(hTestMonitor);
     Exit:
     StartApplicationTimer();

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "ctype.h"
 
 extern WindowPtr tipWindow;
@@ -297,7 +298,7 @@ void TestButtonClicked();
 
 int GetDriveEntryOffset(short Device);
 void GetCommandDetails(char command, char &cmd_flags, char &cmd_length);
-long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, short IoBufLen);
+long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, size_t IoBufLen);
 long EnumerateIomegaDevices(uint8_t *DrivesSkipped);
 long GetModePage(short Device, short PageToGet, void *pBuffer, short BufLen);
 long SetModePage(short Device, void *pBuffer);
@@ -310,9 +311,9 @@ void UnlockAllMedia();
 long SpinUpIomegaCartridge(short Device);
 void EjectAllMedia();
 long GetSpareSectorCounts(char);
-uint8_t GetCartridgeStatus(long Device);
+uint8_t GetCartridgeStatus(long Device, uint8_t flags);
 void HandleDriveChanging();
-void SetCartridgeStatusToEAX(long eax);
+void SetCartridgeStatusToEAX(long eax, uint8_t flags);
 void EjectIomegaCartridge(int Device);
 long PerformRegionTransfer(short XferCmd, void *pBuffer);
 void TestTheDisk();

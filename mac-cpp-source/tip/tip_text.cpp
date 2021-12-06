@@ -123,6 +123,16 @@ ErrorTypeList errorTypeList[] = {
     0x0088020B, "Side Switch Error",
     0x00FFFFE6, "Buffer Too Big",
 
+    /***** Mac SCSI Manager Errors *****/
+    0x00FFFF02, "SCSI comm err, timeout",
+    0x00FFFF03, "SCSI bus arb, timeout",
+    0x00FFFF05, "SCSI phase error",
+    0x00FFFF07, "SCSI Manager busy",
+    0x00FFFF08, "SCSI sequence error",
+    0x00FFFF09, "SCSI blind, timeout",
+    0x00FFFF0A, "SCSI compl, phase err",
+    /***********************************/
+
     0xFFFFFFFF, "-- Unknown Error --",
 
     0, 0

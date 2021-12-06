@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define READ_TIMEOUT 60   /* 300 ticks = 5 seconds */
+#define READ_TIMEOUT 180   /* 300 ticks = 5 seconds */
 
 OSErr scsi_reset() {
    return SCSIReset();
@@ -69,10 +69,10 @@ OSErr scsi_cmd(int id, void *cmd, size_t clen, void *buff, size_t siz, size_t cn
    }
 
    /* Complete the transaction and release the bus */
-   short cstat, cmsg;
+   short cstat = 0, cmsg = 0;
    OSErr comperr = SCSIComplete( &cstat, &cmsg, READ_TIMEOUT );
    if(status) *status = cstat;
-   if (comperr != noErr) {printf("SCSIComplete Error: %d (status: %d)\n", err, cstat); return err;}
+   if (comperr != noErr) {printf("SCSIComplete Error: %d (status: %d)\n", comperr, cstat); return err;}
 
    return err;
 }
