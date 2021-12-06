@@ -212,8 +212,8 @@ long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, size_t IoBufLen) {
         // okay, we have an SS_ERR condition, let's check the SENSE DATA
         // assemble [00 ASC ASCQ SenseKey]
         const long res = (long(sense_data.asc) << 16) |
-                   (long(sense_data.ascq) << 8) |
-                   (long(sense_data.key)      );
+                         (long(sense_data.ascq) << 8) |
+                         (long(sense_data.key)      );
         if(res == MEDIA_CHANGE_CODE) {
             int index = GetDriveEntryOffset(Device);
             DriveArray[index].flags |= MEDIA_CHANGED;
