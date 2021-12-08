@@ -8,6 +8,10 @@ This is the repository for a Macintosh port of [Gibson Research Corp]'s
 Jaz Drives. A big thanks goes to Steve Gibson for the x86 source that
 made this project possible!
 
+[![Trouble in Paradise Demonstration](https://github.com/marciot/mac-tip/raw/main/images/youtube.png)](https://youtu.be/vtBlOaG2pNw)
+
+See a demo on [YouTube]!
+
 Compatibility
 -------------
 
@@ -62,7 +66,12 @@ You can help this project in one of the following ways:
 * Star this project on GitHub to show your support!
 * Sign up to [beta testing in the discussion forum]!
 * Donate a 1 or 2GB Jaz cartridge for testing (I have a 2GB SCSI Jaz drive, but no cartridges!).
-* Become a GitHub sponsor to help fund my work with this and other open-source projects!
+* Become a GitHub sponsor to help fund my various open-source projects!
+
+Other Free Macintosh Software
+-----------------------------
+
+* [ScreenChooser]: A dynamic background changer for vintage Macintoshes!
 
 Got work?
 ---------
@@ -174,3 +183,7 @@ his code in this repository with his permission.
 [beta testing in the discussion forum]: https://github.com/marciot/mac-tip/discussions/1
 [LaunchLib code]: http://www.tempel.org/macdev/index.html#Libs
 [Stone Table Software]: https://web.archive.org/web/20010308062807/http://www.stonetablesoftware.com/rtf2text.html
+[ScreenChooser]: https://archive.org/details/screen-chooser
+[YouTube]: https://youtu.be/vtBlOaG2pNw
+
+
