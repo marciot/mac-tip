@@ -83,9 +83,11 @@ void run_tip() {
         }
     } while (!gDone);
 
-    EjectAllMedia();
     DisposeTipWindow();
     DisposeRgn(cursorRgn);
+
+    // Remount any drives we may have unmounted
+    mac_mount_drives();
 }
 
 void NewTipWindow() {

@@ -38,8 +38,10 @@ bool process_command() {
     printf("\n");
 
     char *arg_str = strchr(cmd, ' ');
-    while(*arg_str == ' ') arg_str++;
-    if(arg_str) arg_val = atoi(arg_str);
+    if(arg_str) {
+        while(*arg_str == ' ') arg_str++;
+        arg_val = atoi(arg_str);
+    }
 
     switch( tolower(cmd[0]) ) {
         case 'h': print_help(); break;
@@ -51,6 +53,8 @@ bool process_command() {
         case 'v': mac_list_volumes(); break;
         case 'u': mac_unmount(arg_val); break;
         case 'q': return false;
+        case 'd': mac_list_drives(); break;
+        case 'm': if(arg_str) mac_mount_drive(arg_val); else mac_mount_drives(); break;
         default: printf("Unknown command, type 'h' for help\n");
     }
     return true;
@@ -62,10 +66,15 @@ void print_help() {
         "  help        : print this help\n"
         "  quit        : exit the command line\n"
 
-        "\nMacintosh commands:\n"
+        "\nMacintosh volume commands:\n"
         "  volumes     : list Mac volumes\n"
-        "  unmount [n] : unmount a volume\n"
         "  eject   [n] : eject a volume\n"
+        "  unmount [n] : unmount a volume\n"
+
+        "\nMacintosh drive commands:\n"
+        "  drives      : list all drives\n"
+        "  mount   [n] : mount a drive\n"
+        "  mount       : mount all drives\n"
 
         "\nGeneral SCSI operations:\n"
         "  reset       : reset the SCSI bus\n"
@@ -84,9 +93,9 @@ void scan_bus() {
    for( id=0; id<8; id++ ) {
       err = scsi_inquiry( id, 0, &reply);
       if( err != 0 ) {
-         printf( "   %hd: (Not installed)\n", id );
+         printf( "%4hd: (Not installed)\n", id );
       } else {
-         printf( "   %hd: ", id );
+         printf( "%4hd: ", id );
          printn( reply.vend, 8 );
          printf( ", " );
          printn( reply.prod, 16 );

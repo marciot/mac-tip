@@ -118,9 +118,6 @@ void WndProc(long iMessage, uint16_t wParam) {
             LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+32);
             LineTo(LOGO_1_LEFT+0,  LOGO_1_TOP+35);
 
-            // show the current logo bitmap
-            SplashTheBitmap();
-
             // paint the 3D program title
             Paint3DHeadline(szIntroTitle, BODY_LEFT, TITLE_TOP);
 
@@ -134,6 +131,9 @@ void WndProc(long iMessage, uint16_t wParam) {
 
             SetRect(&rect, WH_RECT(BODY_LEFT, BODY_TOP+64, BODY_WIDTH, 115));
             TETextBox(szIntroText, strlen(szIntroText), &rect, teFlushDefault);
+
+            // show the current logo bitmap
+            SplashTheBitmap();
 
             ReleaseDC(hIntroWnd);
         }
@@ -177,6 +177,7 @@ void WndProc(long iMessage, uint16_t wParam) {
                         EjectIomegaCartridge(CurrentDevice);
                         break;
                     case DISK_LOW_SPARES:
+                        CartridgeStatus = DISK_AT_SPEED;
                         SetRichEditText(szNotRunning);
                         SetWindowText(hTestButton, szPressToStart);
                         PrepareToBeginTesting();
