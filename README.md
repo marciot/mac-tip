@@ -51,12 +51,8 @@ port.**
 Where are the binaries?
 -----------------------
 
-Once they are ready, compiled binaries will be made available on the
-releases page for people who have signed up for
+Compiled binaries are available on the releases page for people who have signed up for
 [beta testing in the discussion forum]
-
-There is always a risk of data loss with a tool like this, so please
-use it only on non-critical data if you decide to beta test.
 
 How can you help?
 -----------------
@@ -68,10 +64,11 @@ You can help this project in one of the following ways:
 * Donate a 1 or 2GB Jaz cartridge for testing (I have a 2GB SCSI Jaz drive, but no cartridges!).
 * Become a GitHub sponsor to help fund my various open-source projects!
 
-Other Free Macintosh Software
+Other Vintage Macintosh Stuff
 -----------------------------
 
 * [ScreenChooser]: A dynamic background changer for vintage Macintoshes!
+* [Retroweb Vintage Computer Museum]: A web-based museum of vintage computers, including the Macintosh!
 
 Got work?
 ---------
@@ -185,5 +182,6 @@ his code in this repository with his permission.
 [Stone Table Software]: https://web.archive.org/web/20010308062807/http://www.stonetablesoftware.com/rtf2text.html
 [ScreenChooser]: https://archive.org/details/screen-chooser
 [YouTube]: https://youtu.be/vtBlOaG2pNw
+[Retroweb Vintage Computer Museum]: http://retroweb.maclab.org
 
 
