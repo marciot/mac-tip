@@ -10,7 +10,12 @@ made this project possible!
 
 [![Trouble in Paradise Demonstration](https://github.com/marciot/mac-tip/raw/main/images/youtube.png)](https://youtu.be/vtBlOaG2pNw)
 
-See a demo on [YouTube]!
+:tv: See a demo on [YouTube]!
+
+[![Mention in Steve Gibson's Security Now Podcast](https://github.com/marciot/mac-tip/raw/main/images/security-now.png)](https://twit.tv/shows/security-now/episodes/845)
+
+:tv: Watch Steve Gibson react to my unusual request in the November 16th
+episode of the "Security Now" podcast at the 1:05:10 mark.
 
 Compatibility
 -------------
@@ -34,7 +39,7 @@ It has been tested in on the following environments:
 What will not work or is missing:
 
 * USB connected Zip drives have been reported to not work.
-* The functionality for operating with password or write protected disks is missing.
+* The functionality for operating with password or write protected disks has not been ported.
 * The partition recovery feature has been removed, since it is meant for PC disks.
 
 </details>
@@ -88,7 +93,8 @@ Then, insert the cartridge at the testing screen which indicates "Awaiting media
 will recognize it if Mac OS mounts newly inserted cartridge and will give you the choice to
 unmount it.
 
-Alternatively, you can use the command line to unmount a disk **prior to** starting TIP.
+Alternatively, you can use the command line from the "Advanced" menu to unmount a disk
+**prior to** starting a test.
 
 <details>
 <summary>Click here to learn how to use the command line</summary></br>
