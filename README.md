@@ -29,12 +29,14 @@ Power Macintosh G3, released in 1997.
 
 It has been tested in on the following environments:
 
-| Computer           | Memory | System | Drive                   | Firmware |
-|------------------- |--------|--------|-------------------------|----------|
-| Macintosh Plus     | 4MB    | 7.0.1  | Zip Plus 100 Ext. SCSI  | J.66     |
-| PowerBook 3400c    | 144MB  | 8.6    | Zip 100 Ext. SCSI       | E.08     |
-| Power Macintosh G3 | 256MB  | 9.2.1  | Zip 100 Ext. SCSI       | C.22     |
-| Power Macintosh G3 | 256MB  | 9.2.1  | Zip 100 Int. SCSI       | J.03     |
+| Computer           | Memory | System | Drive                               | Firmware |
+|------------------- |--------|--------|-------------------------------------|----------|
+| Macintosh Plus     | 4MB    | 7.0.1  | Zip Plus 100 Ext. SCSI              | J.66     |
+| PowerBook 3400c    | 144MB  | 8.6    | Zip 100 Ext. SCSI                   | E.08     |
+| PowerBook 3400c    | 144MB  | 8.6    | Jaz 2GB Ext. SCSI w/ 1GB media      | E.17     |
+| PowerBook 3400c    | 144MB  | 8.6    | Jaz 2GB Ext. SCSI w/ 2GB media      | E.17     |
+| Power Macintosh G3 | 256MB  | 9.2.1  | Zip 100 Ext. SCSI                   | C.22     |
+| Power Macintosh G3 | 256MB  | 9.2.1  | Zip 100 Int. SCSI                   | J.03     |
 
 What will not work or is missing:
 
@@ -66,12 +68,12 @@ You can help this project in one of the following ways:
 
 * Star this project on GitHub to show your support!
 * Sign up to [beta testing in the discussion forum]!
-* Donate a 1 or 2GB Jaz cartridge for testing (I have a 2GB SCSI Jaz drive, but no cartridges!).
 * Become a GitHub sponsor to help fund my various open-source projects!
 
 Other Vintage Macintosh Stuff
 -----------------------------
 
+* [MiniVNC] (Coming soon!): A remote desktop server for vintage Macintoshes! 
 * [ScreenChooser]: A dynamic background changer for vintage Macintoshes!
 * [Retroweb Vintage Computer Museum]: A web-based museum of vintage computers, including the Macintosh!
 
@@ -153,6 +155,7 @@ Credits
 * Thank you to [Stone Table Software] for providing the tool I used to convert the Windows RTF docs into SimpleText...
 * ...and to the Internet Archive's Wayback Machine for allowing me to access it long after the website was shut down!
 * Thank you to Thomas Tempelmann sharing his [LaunchLib code] which I used to open the documents
+* Thank you to Grant Hutchinson and Nikola Biscan for sending me 1GB and 2GB Jaz cartridges for testing.
 
 The Original TIP For Windows
 ----------------------------
@@ -189,5 +192,6 @@ his code in this repository with his permission.
 [ScreenChooser]: https://archive.org/details/screen-chooser
 [YouTube]: https://youtu.be/vtBlOaG2pNw
 [Retroweb Vintage Computer Museum]: http://retroweb.maclab.org
+[MiniVNC]: https://www.youtube.com/watch?v=zM_sNItbuhc
 
 
