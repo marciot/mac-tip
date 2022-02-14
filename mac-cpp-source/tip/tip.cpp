@@ -161,7 +161,7 @@ void WndProc(long iMessage, uint16_t wParam) {
                         SpinUpIomegaCartridge(CurrentDevice);
                         break;
                     case DISK_AT_SPEED:
-                        printf("Testing the disk\n");
+                        printf("\nTesting the disk\n");
                         if(TestingPhase != READY_TO_TEST) {
                             PrepareToBeginTesting();
                         }
@@ -339,6 +339,15 @@ void PaintCenteredValue(int Xleft, int Ytop, int XWidth, int YHeight, long value
  *
  * This paints the two columns of testing statistics on the test minitor window.
  *******************************************************************************/
+char *FindErrorString(long error) {
+    char *errStr = 0;
+    for (int i = 0; errorTypeList[i].str; i++) {
+        errStr = errorTypeList[i].str;
+        if (errorTypeList[i].code == error) break;
+    }
+    return errStr;
+}
+
 void PaintTestStatistics(bool Active) {
     char szString[40];
     // assemble and paint the sector testing range
@@ -361,12 +370,7 @@ void PaintTestStatistics(bool Active) {
     PaintCenteredString(76, 155, 126, 14, szString, Active);
 
     // show the LastError
-    char *errStr = 0;
-    for (int i = 0; errorTypeList[i].str; i++) {
-        errStr = errorTypeList[i].str;
-        if (errorTypeList[i].code == LastError) break;
-    }
-    PaintCenteredString(76, 172, 126, 14, errStr, Active);
+    PaintCenteredString(76, 172, 126, 14, FindErrorString(LastError), Active);
 
     // show the elapsed time
     CvrtSecondsToHMSstring(szString, SecondsElapsed);

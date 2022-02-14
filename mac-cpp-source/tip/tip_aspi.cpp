@@ -6,7 +6,27 @@
 #include "tip.h"
 
 //#define DEMO
+
+/* The original TIP seems to request more data than is supplied by
+ * certain commands. While this appears to be allowed, it causes
+ * SCSI phase errors to be reported. Setting NO_EXCESS_READS will
+ * adjust the reads to to the max size before such errors occur.
+ */
 #define NO_EXCESS_READS
+
+/* The original TIP will always try to enable Early Recovery. This
+ * fails on certain Jaz drives. While the original TIP will then
+ * retry without Early Recovery, this will cause many errors to be
+ * reported. Enable SUPRESS_ER_ERRORS to prevent this from problem
+ * from happening as frequently
+ */
+#define SUPRESS_ER_ERRORS
+
+/* The original TIP will always try to read the defects list, but
+ * not all drives support this, causing many errors to be shown.
+ * Setting SUPPRESS_DEFECTS_ERROR will silence these errors.
+ */
+#define SUPPRESS_DEFECTS_ERROR
 
 #define MAKE_LITTLE_ENDIAN(a) a // Don't do anything on 68000
 #define MAKE_BIG_ENDIAN(a)  a // Don't do anything on 68000
@@ -95,6 +115,13 @@ long DriveCount = 0;
 
 long JazDrive = 0; // true if the current drive
 long CartridgeStatus = DISK_NOT_PRESENT;
+
+#ifdef SUPRESS_ER_ERRORS
+    Boolean SupressEarlyRecovery = false;
+#endif
+#ifdef SUPPRESS_DEFECTS_ERROR
+    Boolean SupressDefectsError = false;
+#endif
 
 unsigned long StartingInstant;
 
@@ -215,6 +242,7 @@ long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, size_t IoBufLen) {
                          (long(sense_data.ascq) << 8) |
                          (long(sense_data.key)      );
         if(res == MEDIA_CHANGE_CODE) {
+            printf("Media change signalled. Most recent error can be ignored\n\n");
             int index = GetDriveEntryOffset(Device);
             DriveArray[index].flags |= MEDIA_CHANGED;
             return 0;
@@ -312,12 +340,17 @@ long GetModePage(short Device, short PageToGet, void *pBuffer, short BufLen) {
 /*******************************************************************************
  * SET MODE PAGE
  *******************************************************************************/
-long SetModePage(short Device, void *pBuffer) {
-    char* ebx = (char*) pBuffer; // get a pointer to the top of buffer
-    char ecx = ebx[0] + 1; // adjust it up by one
+long SetModePage(short Device, void *pBuffer, short BufLen) {
+    unsigned char* ebx = (unsigned char*) pBuffer; // get a pointer to the top of buffer
+    unsigned char ecx = ebx[0] + 1; // adjust it up by one
 
     ebx[0] = 0; // now clear the two reserved bytes
     ebx[2] = 0;
+
+    if(ecx != BufLen) {
+        printf("Length error in SetModePage %d != %d\n\n", BufLen, (int) ecx);
+        return 0;
+    }
 
     char Scsi[6] = {0}; // init the SCSI parameter block
     Scsi[0] = SCSI_Cmd_ModeSelect; // set the command
@@ -343,15 +376,20 @@ void ModifyModePage(char *PageBuff, char ecc, char retries) {
         ebx[8] = retries; // then set the write count too
 }
 
-void SetErrorRecovery(bool Retries, bool ECC, bool Testing) {
+long SetErrorRecovery(bool Retries, bool ECC, bool Testing) {
     char PageBuff[40];
-
     #ifdef NO_EXCESS_READS
-        // Limit reads to 20 bytes on Zip to prevent controller errors
-        GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, JazDrive ? sizeof(PageBuff) : 20);
+        // Limit reads to 20 bytes on Zip (24 bytes on Jaz) to prevent controller errors
+        const short pageBuffLen = JazDrive ? 24 : 20;
     #else
-        GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, sizeof(PageBuff));
+        const short pageBuffLen = sizeof(PageBuff);
     #endif
+
+    long eax = GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, pageBuffLen);
+    if(eax) {
+        printf("SetErrorRecovery failed\n");
+        return eax;
+    }
 
     #define EARLY_RECOVERY 0x08
     #define PER            0x04
@@ -360,6 +398,9 @@ void SetErrorRecovery(bool Retries, bool ECC, bool Testing) {
     // set the ECC fields
     char ecc = SUPPRESS_ECC; // presume ECC suppression
     if(ECC) {
+        #ifdef SUPRESS_ER_ERRORS
+            if(!SupressEarlyRecovery)
+        #endif
         ecc = EARLY_RECOVERY; // enable ECC and Early Recovery
         if(Testing) {
             ecc = EARLY_RECOVERY | PER; // we're testing, so EER & PER
@@ -374,14 +415,22 @@ void SetErrorRecovery(bool Retries, bool ECC, bool Testing) {
         retries = 0;
 
     ModifyModePage(PageBuff, ecc, retries);
-    const long eax = SetModePage(CurrentDevice, PageBuff);
+
+    eax = SetModePage(CurrentDevice, PageBuff, pageBuffLen);
     // if we had an invalid field in the CDB (the EER bit was on)
     if (eax == 0x00260005) {
-        GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, sizeof(PageBuff));
-        ecc &= ~0x08; // same, *BUT*NOT* Early Recovery
+        GetModePage(CurrentDevice, ERROR_RECOVERY_PAGE, PageBuff, pageBuffLen);
+        ecc &= ~EARLY_RECOVERY; // same, *BUT*NOT* Early Recovery
         ModifyModePage(PageBuff, ecc, retries);
-        SetModePage(CurrentDevice, PageBuff);
+        eax = SetModePage(CurrentDevice, PageBuff, pageBuffLen);
+        #ifdef SUPRESS_ER_ERRORS
+            if(!eax) {
+                printf("  Early recovery not supported on this drive. Ignoring.\n\n");
+                SupressEarlyRecovery = true;
+            }
+        #endif
     }
+    return eax;
 }
 
 /*******************************************************************************
@@ -468,7 +517,18 @@ long GetSpareSectorCounts(char checkPassword) {
     Scsi[0] = SCSI_Cmd_ReadDefectData;
     Scsi[2] = 0x1e; // 0b00011110 defect format, G/P bits
     Scsi[8] = 4; // ask for only FOUR bytes
+    #ifdef SUPPRESS_DEFECTS_ERROR
+        if(SupressDefectsError)
+            eax = INCOMPATIBLE_MEDIA;
+        else
+    #endif
     eax = SCSICommand(CurrentDevice, Scsi, &DefectHeader, sizeof(DefectHeader));
+    #ifdef SUPPRESS_DEFECTS_ERROR
+        if(!SupressDefectsError && eax == INCOMPATIBLE_MEDIA) {
+            printf("Defects list not supported on this drive. Ignoring.\n\n");
+            SupressDefectsError = true;
+        }
+    #endif
     if ((!eax) || (eax == INCOMPATIBLE_MEDIA)) {
         // we could read its defect list ... so show it!
         // --------------------------------------------------------------------------
@@ -635,7 +695,7 @@ uint8_t GetCartridgeStatus(long Device, uint8_t flags) {
     long eax;
     char DiskStat[72];
     #ifdef NO_EXCESS_READS
-        eax = GetNonSenseData(Device, DISK_STATUS_PAGE, DiskStat, (flags & JAZ_DRIVE) ? sizeof(DiskStat) : 63);
+        eax = GetNonSenseData(Device, DISK_STATUS_PAGE, DiskStat, 4);
         if (eax) return DISK_STATUS_UNKNOWN;
     #else
         eax = GetNonSenseData(Device, DISK_STATUS_PAGE, DiskStat, sizeof(DiskStat));
@@ -674,6 +734,7 @@ void SetCartridgeStatusToEAX(long eax, uint8_t flags) {
             SetRichEditText(szNotRunning);
             goto DisableActions;
         case DISK_AT_SPEED:
+            printf("Disk at speed\n");
             eax = GetSpareSectorCounts(true); // update the Cart Condition
             if(eax == MEDIA_NOT_PRESENT) {
                 goto DisableActions;
@@ -686,10 +747,14 @@ void SetCartridgeStatusToEAX(long eax, uint8_t flags) {
                 FirmErrors = 0;
                 // check to see if we have enough spares to start
                 if(JazDrive) {
+                    printf("Spare Sectors: %ld/%d\n", Side_0_SparesCount, MAXIMUM_JAZ_SPARES);
                     if(Side_0_SparesCount < MINIMUM_JAZ_SPARES)
                         goto InsufficientSpares;
                 }
                 else {
+                    printf("Spare Sectors:\n");
+                    printf("  Side 1: %ld/%d\n", Side_0_SparesCount, MAXIMUM_ZIP_SPARES);
+                    printf("  Side 2: %ld/%d\n", Side_1_SparesCount, MAXIMUM_ZIP_SPARES);
                     if(Side_0_SparesCount < MINIMUM_ZIP_SPARES) {
                         goto InsufficientSpares;
                     }
@@ -761,6 +826,12 @@ void PrepareToBeginTesting() {
     HardErrors                = 0;
     UserInterrupt             = 0;
     LastError                 = 0;
+    #ifdef SUPRESS_ER_ERRORS
+        SupressEarlyRecovery = false;
+    #endif
+    #ifdef SUPPRESS_DEFECTS_ERROR
+        SupressDefectsError = false;
+    #endif
     #ifdef DEMO
         LastLBAOnCartridge        = 99999;
         SoftErrors                = 6;
@@ -820,12 +891,12 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
     char Scsi[10] = {0}; // clear out the SCSI CDB
     const long InitialHardErrors = HardErrors;
 
-    SetErrorRecovery(false, false, true); // disable Retries & ECC
+    long eax = SetErrorRecovery(false, false, true); // disable Retries & ECC
 
     Scsi[0] = XferCmd;
     SET_DWORD_AT(Scsi, 2, MAKE_BIG_ENDIAN(FirstLBASector)); // WHICH LBA's to read, BIG endian
     SET_WORD_AT (Scsi, 7, MAKE_BIG_ENDIAN(NumberOfLBAs));   // HOW MANY to read, BIG endian
-    long eax = SCSICommand(CurrentDevice, Scsi, pBuffer, NumberOfLBAs * BYTES_PER_SECTOR);
+    eax = SCSICommand(CurrentDevice, Scsi, pBuffer, NumberOfLBAs * BYTES_PER_SECTOR);
     // if we failed somewhere during our transfer ... let's zero in on it
     if (eax) {
         if ( eax == SS_ERR || // if it's a CONTROLLER ERROR, skip!
@@ -833,6 +904,8 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
              eax == LBA_TOO_LARGE) {
             goto Exit;
         }
+
+        printf("Starting detailed search...\n");
 
         //--------------------------------------------------------------------------
         // Save error and current Soft + Hard Error count to see if we do FIND the glitch ...
@@ -863,6 +936,7 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
                 if (eax == SS_ERR) goto Exit; // if it's a CONTROLLER ERROR, skip!
                 if (eax & 0xFF == 1) goto PostTheError; // did we recover?
 
+                printf("  Found error, retesting with retries\n");
                 SetErrorRecovery(true, false, true); // enable retries
                 eax = SCSICommand(CurrentDevice, Scsi, LocalBuffer, BYTES_PER_SECTOR);
                 if (eax) {
@@ -870,7 +944,8 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
                     if (eax == SS_ERR) goto Exit; // if it's a CONTROLLER ERROR, skip!
                     if (eax & 0xFF == 1) goto PostTheError; // did we recover?
 
-                    SetErrorRecovery(true, true, true); // enable retries AND EEC
+                    printf("  Found error, retesting with retries & ECC\n");
+                    eax = SetErrorRecovery(true, true, true); // enable retries AND EEC
                     eax = SCSICommand(CurrentDevice, Scsi, LocalBuffer, BYTES_PER_SECTOR);
                     if (eax) {
                         // failed with retries and EEC
@@ -888,6 +963,8 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
                 }
 
             PostTheError:
+                printf("  %s (Sector %ld)\n", FindErrorString(eax), SingleTransferLBA);
+                printf("--------------------------------------------\n");
                 BumpErrorCounts(eax); // given eax, count the errors
                 GetSpareSectorCounts(false); // update the Cart's Condition
                 UpdateRunTimeDisplay();
@@ -897,6 +974,7 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
             ProcessPendingMessages();
         }
 
+        printf("... detailed search finished\n");
         // now see whether we *did* found something to complain about ...
         eax = SoftErrors + HardErrors;
         if (eax == GlitchCount) {
@@ -907,6 +985,7 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
             long ebx = eax & 0x00FF00FF; // strip the ASCQ byte
             if(ebx == 0x00110003) // if we're about to say "unrecovered read"
                 eax = 0x170101; // change it to: "Read with Retries"
+            printf("%s\n", FindErrorString(eax));
             BumpErrorCounts(eax); // given eax, count the errors
             HardErrors = SavedHardErrors; // restore the counts
             SoftErrors = SavedSoftErrors;
@@ -917,6 +996,7 @@ long PerformRegionTransfer(short XferCmd, void *pBuffer) {
         eax = 0; // now let's return happiness to our caller
         if (HardErrors != InitialHardErrors) // UNRECOVERABLE errors!
             eax = -1;
+        printf("\n");
     }
 
 Exit:

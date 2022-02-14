@@ -61,8 +61,11 @@ OSErr scsi_cmd(int id, void *cmd, size_t clen, void *buff, size_t siz, size_t cn
          case SCSI_READ:               io_err = SCSIRead( (Ptr) TIB ); break;
          default: break;
       }
-      if (io_err != noErr) {
-         printf("SCSI Read/Write Error: %d\n", io_err);
+      if (io_err == scPhaseErr && flags & SCSI_READ) {
+         printf("\nSCSI phase error; less data delivered than requested\n");
+      }
+      else if (io_err != noErr) {
+         printf("\nSCSI Read/Write Error: %d\n", io_err);
       }
    } else {
       printf("SCSICmd Error: %d\n", err);

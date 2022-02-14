@@ -47,6 +47,7 @@ bool process_command() {
         case 'h': print_help(); break;
         case 'l': scan_bus(); break;
         case 's': iomega_spin_up_cartridge(arg_val); break;
+        case 'p': iomega_spin_down_cartridge(arg_val); break;
         case 'r': scsi_reset(); break;
         case 'e': mac_eject(arg_val); break;
         case 'i': dev_info(arg_val); break;
@@ -83,6 +84,7 @@ void print_help() {
 
         "\nIomega device operations on SCSI device:\n"
         "  spin    [n] : spin up a cartridge\n"
+        "  pause   [n] : spin down a cartridge\n"
     );
 }
 

@@ -29,6 +29,19 @@ OSErr iomega_spin_down_and_eject( int id ) {
     return scsi_cmd(id, cmd, sizeof(cmd), 0, 0, 0, 0);
 }
 
+OSErr iomega_spin_down_cartridge( int id ) {
+    // issue an Asynchronous STOP command to induce spindown
+    char cmd[6] = {
+        SCSI_Cmd_StartStopUnit,
+        1,   // set the IMMED bit for offline
+        0,
+        0,
+        0,
+        0
+    };
+    return scsi_cmd(id, cmd, sizeof(cmd), 0, 0, 0, 0);
+}
+
 OSErr iomega_set_prevent_removal( int id, bool lock) {
     OSErr err;
     char cmd[6] = {

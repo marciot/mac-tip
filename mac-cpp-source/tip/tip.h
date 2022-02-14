@@ -282,6 +282,8 @@ void PaintTheBarGraphs(bool Active);
 void PaintTestStatistics(bool Active);
 void CvrtSecondsToHMSstring(char *szString, long seconds);
 
+char *FindErrorString(long error);
+
 void UpdateCurrentSector();
 void UpdateRunTimeDisplay();
 void UpdateRunPhaseDisplay();
@@ -301,9 +303,9 @@ void GetCommandDetails(char command, char &cmd_flags, char &cmd_length);
 long SCSICommand(short Device, char *lpCmdBlk, void *lpIoBuf, size_t IoBufLen);
 long EnumerateIomegaDevices(uint8_t *DrivesSkipped);
 long GetModePage(short Device, short PageToGet, void *pBuffer, short BufLen);
-long SetModePage(short Device, void *pBuffer);
+long SetModePage(short Device, void *pBuffer, short BufLen);
 void ModifyModePage(char *PageBuff, char eec, char retries);
-void SetErrorRecovery(bool Retries, bool ECC, bool Testing);
+long SetErrorRecovery(bool Retries, bool ECC, bool Testing);
 long GetNonSenseData(short Device, short DataPage, void *Buffer, short BufLen);
 long LockCurrentDrive();
 long UnlockCurrentDrive();
