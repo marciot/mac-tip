@@ -73,7 +73,7 @@ You can help this project in one of the following ways:
 Other Vintage Macintosh Stuff
 -----------------------------
 
-* [MiniVNC] (Coming soon!): A remote desktop server for vintage Macintoshes! 
+* [MiniVNC]: A remote desktop server for vintage Macintoshes! 
 * [ScreenChooser]: A dynamic background changer for vintage Macintoshes!
 * [Retroweb Vintage Computer Museum]: A web-based museum of vintage computers, including the Macintosh!
 
@@ -192,6 +192,6 @@ his code in this repository with his permission.
 [ScreenChooser]: https://archive.org/details/screen-chooser
 [YouTube]: https://youtu.be/vtBlOaG2pNw
 [Retroweb Vintage Computer Museum]: http://retroweb.maclab.org
-[MiniVNC]: https://www.youtube.com/watch?v=zM_sNItbuhc
+[MiniVNC]: https://github.com/marciot/mac-minivnc
 
 
